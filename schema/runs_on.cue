@@ -131,7 +131,7 @@ package schema
 	schedule?: [...#PoolSchedule]
 
 	// Runner reference (required)
-	runner: string
+	runner: string & != ""
 
 	// Maximum surge instances
 	max_surge?: int & >=0

@@ -1,0 +1,4 @@
+pools:
+  pool_name: {}
+  pool_with_empty_runner:
+    runner: ""

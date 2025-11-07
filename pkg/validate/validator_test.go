@@ -43,6 +43,7 @@ func TestValidateFile_Invalid(t *testing.T) {
 		"../../schema/testdata/invalid/pool-missing-runner.yml",
 		"../../schema/testdata/invalid/pool-invalid-schedule.yml",
 		"../../schema/testdata/invalid/pool-empty-schedule-name.yml",
+		"../../schema/testdata/invalid/pool-empty.yml",
 		"../../schema/testdata/invalid/indentation-issue.yml",
 		"../../schema/testdata/invalid/indentation-nested.yml",
 	}
