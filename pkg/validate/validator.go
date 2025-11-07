@@ -40,7 +40,10 @@ func ValidateFile(ctx context.Context, filePath string) ([]Diagnostic, error) {
 	if err != nil {
 		return nil, fmt.Errorf("failed to open file: %w", err)
 	}
-	defer file.Close()
+	defer func() {
+		//nolint:errcheck // Close errors on read-only files are safe to ignore
+		_ = file.Close()
+	}()
 
 	return ValidateReader(ctx, file, filePath)
 }
@@ -294,7 +297,8 @@ func checkDeprecatedFieldsRecursive(data interface{}, sourceName string, path st
 			}
 			currentPath += key
 
-			if key == "runners" {
+			switch key {
+			case "runners":
 				// Check runners map
 				if runnersMap, ok := value.(map[string]interface{}); ok {
 					for runnerKey, runnerValue := range runnersMap {
@@ -311,7 +315,7 @@ func checkDeprecatedFieldsRecursive(data interface{}, sourceName string, path st
 						}
 					}
 				}
-			} else if key == "pools" {
+			case "pools":
 				// Check pools map
 				if poolsMap, ok := value.(map[string]interface{}); ok {
 					for poolKey, poolValue := range poolsMap {
@@ -328,7 +332,7 @@ func checkDeprecatedFieldsRecursive(data interface{}, sourceName string, path st
 						}
 					}
 				}
-			} else {
+			default:
 				// Recurse into nested structures
 				warnings = append(warnings, checkDeprecatedFieldsRecursive(value, sourceName, currentPath)...)
 			}

@@ -163,7 +163,10 @@ func TestValidateReader(t *testing.T) {
 	if err != nil {
 		t.Fatalf("Failed to open test file: %v", err)
 	}
-	defer file.Close()
+	defer func() {
+		//nolint:errcheck // Close errors in tests are safe to ignore
+		_ = file.Close()
+	}()
 
 	diags, err := validate.ValidateReader(context.Background(), file, testFile)
 	if err != nil {

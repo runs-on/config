@@ -1,6 +1,6 @@
+version: 2
+
 linters-settings:
-  gofmt:
-    simplify: true
   govet:
     check-shadowing: true
   gocyclo:
@@ -14,14 +14,10 @@ linters-settings:
 linters:
   enable:
     - errcheck
-    - gosimple
     - govet
     - ineffassign
     - staticcheck
-    - typecheck
     - unused
-    - gofmt
-    - goimports
 
 issues:
   exclude-rules:
