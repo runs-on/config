@@ -36,6 +36,9 @@ jobs:
       - name: Download dependencies
         run: mise exec -- go mod download
       
+      - name: Fix CUE module
+        run: mise exec -- cue mod fix
+      
       - name: Generate schema
         run: make gen
       
