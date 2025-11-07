@@ -1,0 +1,44 @@
+_extends: ".github-private"
+
+runners:
+  custom-runner:
+    cpu: [2]
+    ram: "16"
+    family: [c7a]
+    image: ubuntu22-full-x64
+    ssh: false
+
+  other-runner:
+    cpu: 4
+    ram: [16, 32]
+    family: [m7a]
+    image: ubuntu22-full-x64
+
+images:
+  ubuntu22-custom:
+    ami: ami-1234567890abcdef0
+    platform: linux
+    arch: x64
+
+pools:
+  dependabot:
+    name: dependabot
+    env: production
+    timezone: UTC
+    runner: small-x64
+    max_surge: 5
+    schedule:
+      - name: default
+        hot: 2
+        stopped: 3
+      - name: nights
+        hot: 0
+        stopped: 1
+        match:
+          day: [monday, tuesday]
+          time: ["22:00", "06:00"]
+
+admins:
+  - admin1
+  - admin2
+

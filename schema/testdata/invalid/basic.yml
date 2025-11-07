@@ -1,0 +1,15 @@
+runners:
+  invalid-runner:
+    cpu: "not-a-number"
+    spot: "invalid-spot-value"
+    family: []
+
+pools:
+  invalid-pool:
+    name: "Invalid Pool Name"
+    runner: ""
+    schedule:
+      - name: test
+        hot: -1
+        stopped: -2
+

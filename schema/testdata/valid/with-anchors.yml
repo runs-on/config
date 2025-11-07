@@ -1,0 +1,15 @@
+runners:
+  test-runner: &test-runner
+    cpu: [2, 4]
+    ram: [16, 32]
+    family: [c7a]
+    image: ubuntu22-full-x64
+
+  test-runner-copy:
+    <<: *test-runner
+    cpu: [4, 8]
+
+images:
+  ubuntu22-full-x64:
+    ami: ami-1234567890abcdef0
+
