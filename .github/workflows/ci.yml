@@ -40,6 +40,8 @@ jobs:
         run: mise exec -- cue mod fix
       
       - name: Tidy dependencies
+        env:
+          GOSUMDB: sum.golang.org
         run: mise exec -- go mod tidy
       
       - name: Generate schema
