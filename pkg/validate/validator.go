@@ -67,6 +67,19 @@ func ValidateReader(ctx context.Context, r io.Reader, sourceName string) ([]Diag
 		}, nil
 	}
 
+	// Normalize boolean spot values to strings (CUE schema expects strings)
+	yamlData = normalizeSpotValues(yamlData)
+
+	// Re-marshal and unmarshal to ensure types are properly converted
+	// This ensures boolean values are properly converted to strings
+	normalizedYAML, err := yaml.Marshal(yamlData)
+	if err != nil {
+		return nil, fmt.Errorf("failed to marshal normalized YAML: %w", err)
+	}
+	if err := yaml.Unmarshal(normalizedYAML, &yamlData); err != nil {
+		return nil, fmt.Errorf("failed to unmarshal normalized YAML: %w", err)
+	}
+
 	// Load CUE schema
 	schema, err := loadSchema()
 	if err != nil {
@@ -155,3 +168,97 @@ func convertCueErrors(err error, sourceName string) []Diagnostic {
 	return diagnostics
 }
 
+// normalizeSpotValues recursively normalizes boolean spot values to strings
+// This allows YAML files to use spot: false (boolean) which gets converted to spot: "false" (string)
+func normalizeSpotValues(data interface{}) interface{} {
+	switch v := data.(type) {
+	case map[string]interface{}:
+		result := make(map[string]interface{})
+		for key, value := range v {
+			if key == "runners" {
+				// Handle runners map specially to normalize spot values
+				if runnersMap, ok := value.(map[string]interface{}); ok {
+					normalizedRunners := make(map[string]interface{})
+					for runnerKey, runnerValue := range runnersMap {
+						if runnerSpec, ok := runnerValue.(map[string]interface{}); ok {
+							normalizedSpec := make(map[string]interface{})
+							for specKey, specValue := range runnerSpec {
+								if specKey == "spot" {
+									// Convert boolean to string
+									if spotBool, ok := specValue.(bool); ok {
+										if spotBool {
+											normalizedSpec[specKey] = "true"
+										} else {
+											normalizedSpec[specKey] = "false"
+										}
+									} else {
+										normalizedSpec[specKey] = normalizeSpotValues(specValue)
+									}
+								} else {
+									normalizedSpec[specKey] = normalizeSpotValues(specValue)
+								}
+							}
+							normalizedRunners[runnerKey] = normalizedSpec
+						} else {
+							normalizedRunners[runnerKey] = normalizeSpotValues(runnerValue)
+						}
+					}
+					result[key] = normalizedRunners
+				} else {
+					result[key] = normalizeSpotValues(value)
+				}
+			} else {
+				result[key] = normalizeSpotValues(value)
+			}
+		}
+		return result
+	case map[interface{}]interface{}:
+		result := make(map[interface{}]interface{})
+		for key, value := range v {
+			if keyStr, ok := key.(string); ok && keyStr == "runners" {
+				// Handle runners map specially to normalize spot values
+				if runnersMap, ok := value.(map[interface{}]interface{}); ok {
+					normalizedRunners := make(map[interface{}]interface{})
+					for runnerKey, runnerValue := range runnersMap {
+						if runnerSpec, ok := runnerValue.(map[interface{}]interface{}); ok {
+							normalizedSpec := make(map[interface{}]interface{})
+							for specKey, specValue := range runnerSpec {
+								if specKeyStr, ok := specKey.(string); ok && specKeyStr == "spot" {
+									// Convert boolean to string
+									if spotBool, ok := specValue.(bool); ok {
+										if spotBool {
+											normalizedSpec[specKey] = "true"
+										} else {
+											normalizedSpec[specKey] = "false"
+										}
+									} else {
+										normalizedSpec[specKey] = normalizeSpotValues(specValue)
+									}
+								} else {
+									normalizedSpec[specKey] = normalizeSpotValues(specValue)
+								}
+							}
+							normalizedRunners[runnerKey] = normalizedSpec
+						} else {
+							normalizedRunners[runnerKey] = normalizeSpotValues(runnerValue)
+						}
+					}
+					result[key] = normalizedRunners
+				} else {
+					result[key] = normalizeSpotValues(value)
+				}
+			} else {
+				result[key] = normalizeSpotValues(value)
+			}
+		}
+		return result
+	case []interface{}:
+		result := make([]interface{}, len(v))
+		for i, item := range v {
+			result[i] = normalizeSpotValues(item)
+		}
+		return result
+	default:
+		return v
+	}
+}

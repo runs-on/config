@@ -32,10 +32,10 @@ package schema
 	// Optional unique identifier for the runner
 	id?: string
 
-	// CPU count(s) - can be single int, string, or array
+	// CPU count(s) - can be single int, string (e.g., "2+4"), or array
 	cpu?: #IntArray
 
-	// RAM in GB - can be single int, string, or array
+	// RAM in GB - can be single int, string (e.g., "16+32"), or array
 	ram?: #IntArray
 
 	// Disk size (DEPRECATED: use volume instead)
@@ -45,10 +45,10 @@ package schema
 	// e.g., "80gb:gp3:125mbs:3000iops"
 	volume?: string
 
-	// Retry configuration
+	// Retry configuration - can be string (e.g., "always+on-failure") or array
 	retry?: #StringArray
 
-	// Extra features (e.g., "s3-cache", "efs")
+	// Extra features (e.g., "s3-cache", "efs") - can be string (e.g., "s3-cache+tmpfs") or array
 	extras?: #StringArray
 
 	// SSH access configuration (bool or string "true"/"false")
@@ -62,7 +62,7 @@ package schema
 	//         "lp", "lowest-price", "co", "capacity-optimized"
 	spot?: #SpotValue
 
-	// Instance family (e.g., ["c7a"], ["c7a", "m7a"])
+	// Instance family - can be string (e.g., "c7a+m7a") or array (e.g., ["c7a", "m7a"])
 	family?: #StringArray
 
 	// Image reference
@@ -159,15 +159,18 @@ package schema
 }
 
 // IntArray can be a single int, string representation, or array
+// String values can use "+" separator (e.g., "2+4" is equivalent to [2, 4])
 #IntArray: int | string | [...int] | [...string]
 
 // StringArray can be a single string or array of strings
+// String values can use "+" separator (e.g., "s3-cache+tmpfs" is equivalent to ["s3-cache", "tmpfs"])
 #StringArray: string | [...string]
 
 // BoolOrString can be a bool or string "true"/"false"
 #BoolOrString: bool | "true" | "false"
 
 // SpotValue defines valid spot instance configuration values
+// Note: Boolean values (false/true) are automatically normalized to strings ("false"/"true") during validation
 #SpotValue: "false" | "never" | "true" | "pco" | "price-capacity-optimized" | "lp" | "lowest-price" | "co" | "capacity-optimized"
 
 // Main schema entry point

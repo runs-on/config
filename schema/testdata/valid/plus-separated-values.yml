@@ -1,0 +1,8 @@
+runners:
+  test-runner-plus:
+    cpu: "2+4"
+    ram: "16+32"
+    family: ["c7a", "m7a"]
+    extras: "s3-cache+tmpfs"
+    retry: "always+on-failure"
+
