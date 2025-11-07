@@ -1,0 +1,15 @@
+runners:
+  test-runner:
+    cpu: [2]
+    ram: [16]
+    family: [c7a]
+
+pools:
+  invalid-indent-nested:
+    name: test-pool
+    runner: test-runner
+    schedule:
+    - name: default
+      hot: 1
+      stopped: 2
+

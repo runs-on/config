@@ -12,4 +12,3 @@ pools:
       - name: test
         hot: -1
         stopped: -2
-

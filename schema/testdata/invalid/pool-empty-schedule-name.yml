@@ -1,0 +1,9 @@
+pools:
+  empty-schedule-name:
+    name: test-pool
+    runner: test-runner
+    schedule:
+      - name: ""
+        hot: 1
+        stopped: 2
+

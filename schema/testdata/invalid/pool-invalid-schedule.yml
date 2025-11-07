@@ -1,0 +1,12 @@
+pools:
+  invalid-schedule:
+    name: test-pool
+    runner: test-runner
+    schedule:
+      - name: default
+        hot: -5
+        stopped: 3
+      - name: invalid
+        hot: 2
+        stopped: -10
+
