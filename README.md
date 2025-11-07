@@ -9,7 +9,7 @@ The RunsOn config schema defines the structure and validation rules for reposito
 - **CUE Schema**: Authoritative schema definition in CUE format (`schema/runs_on.cue`)
 - **JSON Schema**: Generated JSON schema for tooling integration (`schema/schema.json`)
 - **Go Validation Library**: Go package for validating config files (`pkg/validate`)
-- **CLI Linter**: Standalone binary for linting config files (`cmd/runs-on-config-lint`)
+- **CLI Linter**: Standalone binary for linting config files (`cmd/lint`)
 
 ## Installation
 
@@ -38,7 +38,7 @@ go get github.com/runs-on/config
 ### CLI Linter
 
 ```bash
-go install github.com/runs-on/config/cmd/runs-on-config-lint@latest
+go install github.com/runs-on/config/cmd/lint@latest
 ```
 
 ## Usage
@@ -65,16 +65,16 @@ for _, diag := range diagnostics {
 
 ```bash
 # Validate a file
-runs-on-config-lint path/to/runs-on.yml
+lint path/to/runs-on.yml
 
 # Read from stdin
-cat runs-on.yml | runs-on-config-lint --stdin
+cat runs-on.yml | lint --stdin
 
 # JSON output
-runs-on-config-lint --format json path/to/runs-on.yml
+lint --format json path/to/runs-on.yml
 
 # SARIF output (for GitHub Actions)
-runs-on-config-lint --format sarif path/to/runs-on.yml
+lint --format sarif path/to/runs-on.yml
 ```
 
 ### RunsOn CLI Integration
@@ -196,7 +196,7 @@ make lint
 ```bash
 make install
 # or
-go install ./cmd/runs-on-config-lint
+go install ./cmd/lint
 ```
 
 ## CI Integration
@@ -216,10 +216,10 @@ Or use the binary:
 
 ```yaml
 - name: Install linter
-  run: go install github.com/runs-on/config/cmd/runs-on-config-lint@latest
+  run: go install github.com/runs-on/config/cmd/lint@latest
 
 - name: Validate config
-  run: runs-on-config-lint .github/runs-on.yml
+  run: lint .github/runs-on.yml
 ```
 
 ### Pre-commit Hook
@@ -231,7 +231,7 @@ repos:
   - repo: https://github.com/runs-on/config
     rev: v0.1.0
     hooks:
-      - id: runs-on-config-lint
+      - id: lint
         args: [--format, json]
 ```
 

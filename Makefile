@@ -30,8 +30,8 @@ test:
 	mise exec -- go test ./...
 
 install:
-	@echo "Installing runs-on-config-lint..."
-	mise exec -- go install ./cmd/runs-on-config-lint
+	@echo "Installing lint..."
+	mise exec -- go install ./cmd/lint
 
 clean:
 	@echo "Cleaning generated files..."

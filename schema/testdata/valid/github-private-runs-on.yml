@@ -1,0 +1,77 @@
+runners:
+  windows22-full-x64:
+    family: m7i
+    ram: 8
+    image: windows22-full-x64
+
+  cheap-arm64:
+    cpu: [0.5, 1, 2]
+    family: ["t4g"]
+  global-config-runner:
+    cpu: 4
+    family: m7
+    spot: false
+    ssh: true
+    image: ubuntu22-full-x64
+  cheap-x64:
+    image: ubuntu24-full-x64
+    ram: 2
+    family: [t3]
+  cheap-and-fast:
+    image: ubuntu22-full-x64
+    ram: 1
+    family: [t3]
+    volume: gp3:40gb:125mbps:3000iops
+  m7a:
+    image: ubuntu24-full-x64
+    ram: 8
+    family: [m7a]
+    volume: gp3:40gb:125mbps:3000iops
+  i7ie:
+    image: ubuntu24-full-x64
+    cpu: 2
+    family: [i7ie]
+    volume: gp3:30gb:125mbps:3000iops
+
+pools:
+  m7a-stage:
+    runner: m7a
+    timezone: "Europe/Paris"
+    environment: production
+    schedule:
+      - name: default
+        stopped: 1
+        hot: 0
+
+  dependabot:
+    runner: m7a
+    timezone: "Europe/Paris"
+    schedule:
+      - name: default
+        stopped: 1
+        hot: 0
+
+  windows-stage:
+    runner: windows22-full-x64
+    timezone: "Europe/Paris"
+    environment: dev
+    schedule:
+      - name: default
+        stopped: 1
+        hot: 0
+    
+  cheap-and-fast:
+    runner: cheap-and-fast
+    timezone: "Europe/Paris"
+    environment: dev
+    schedule:
+      - name: default
+        stopped: 10
+        hot: 4
+      - name: working-days
+        match:
+          day: ["monday", "tuesday", "wednesday", "thursday", "friday", "saturday", "sunday"]
+          time: ["10:00", "16:00"]
+        stopped: 2
+        hot: 1
+

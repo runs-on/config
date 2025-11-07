@@ -93,12 +93,12 @@ func ValidateReader(ctx context.Context, r io.Reader, sourceName string) ([]Diag
 	// Unify with schema and validate
 	unified := schema.Unify(dataValue)
 	var schemaErrors []Diagnostic
-	
+
 	// Validate for type errors and constraint violations
 	if err := unified.Validate(); err != nil {
 		schemaErrors = convertCueErrors(err, sourceName)
 	}
-	
+
 	// Check for missing required fields (incomplete values)
 	// CUE's Validate() doesn't catch missing required fields by default,
 	// so we need to explicitly check for incomplete/concrete errors
@@ -207,7 +207,7 @@ func checkDeprecatedFields(yamlData interface{}, sourceName string, originalYAML
 		return checkDeprecatedFieldsRecursive(yamlData, sourceName, "")
 	}
 
-	// Check for deprecated disk field in runners
+	// Check for deprecated fields
 	if yamlNode.Kind == yaml.DocumentNode && len(yamlNode.Content) > 0 {
 		root := yamlNode.Content[0]
 		if root.Kind == yaml.MappingNode {
@@ -218,7 +218,7 @@ func checkDeprecatedFields(yamlData interface{}, sourceName string, originalYAML
 				keyNode := root.Content[i]
 				valueNode := root.Content[i+1]
 				if keyNode.Value == "runners" && valueNode.Kind == yaml.MappingNode {
-					// Found runners map, check each runner
+					// Found runners map, check each runner for deprecated disk field
 					for j := 0; j < len(valueNode.Content); j += 2 {
 						if j+1 >= len(valueNode.Content) {
 							break
@@ -238,7 +238,35 @@ func checkDeprecatedFields(yamlData interface{}, sourceName string, originalYAML
 										Path:     sourceName,
 										Line:     fieldKeyNode.Line,
 										Column:   fieldKeyNode.Column,
-										Message:  fmt.Sprintf("field 'disk' is deprecated, use 'volume' instead (e.g., volume=80gb:gp3:125mbs:3000iops)"),
+										Message:  "field 'disk' is deprecated, use 'volume' instead (e.g., volume=80gb:gp3:125mbs:3000iops)",
+										Severity: SeverityWarning,
+									})
+								}
+							}
+						}
+					}
+				} else if keyNode.Value == "pools" && valueNode.Kind == yaml.MappingNode {
+					// Found pools map, check each pool for deprecated environment field
+					for j := 0; j < len(valueNode.Content); j += 2 {
+						if j+1 >= len(valueNode.Content) {
+							break
+						}
+						_ = valueNode.Content[j] // pool key node (not used, but needed for iteration)
+						poolValueNode := valueNode.Content[j+1]
+						if poolValueNode.Kind == yaml.MappingNode {
+							// Check if this pool has an environment field
+							for k := 0; k < len(poolValueNode.Content); k += 2 {
+								if k >= len(poolValueNode.Content) {
+									break
+								}
+								fieldKeyNode := poolValueNode.Content[k]
+								if fieldKeyNode.Value == "environment" {
+									// Found deprecated environment field
+									warnings = append(warnings, Diagnostic{
+										Path:     sourceName,
+										Line:     fieldKeyNode.Line,
+										Column:   fieldKeyNode.Column,
+										Message:  "field 'environment' is deprecated, use 'env' instead",
 										Severity: SeverityWarning,
 									})
 								}
@@ -283,6 +311,23 @@ func checkDeprecatedFieldsRecursive(data interface{}, sourceName string, path st
 						}
 					}
 				}
+			} else if key == "pools" {
+				// Check pools map
+				if poolsMap, ok := value.(map[string]interface{}); ok {
+					for poolKey, poolValue := range poolsMap {
+						if poolSpec, ok := poolValue.(map[string]interface{}); ok {
+							if _, hasEnvironment := poolSpec["environment"]; hasEnvironment {
+								warnings = append(warnings, Diagnostic{
+									Path:     sourceName,
+									Line:     0,
+									Column:   0,
+									Message:  fmt.Sprintf("field 'pools.%s.environment' is deprecated, use 'env' instead", poolKey),
+									Severity: SeverityWarning,
+								})
+							}
+						}
+					}
+				}
 			} else {
 				// Recurse into nested structures
 				warnings = append(warnings, checkDeprecatedFieldsRecursive(value, sourceName, currentPath)...)
@@ -315,6 +360,27 @@ func checkDeprecatedFieldsRecursive(data interface{}, sourceName string, path st
 									Line:     0,
 									Column:   0,
 									Message:  fmt.Sprintf("field 'runners.%s.disk' is deprecated, use 'volume' instead (e.g., volume=80gb:gp3:125mbs:3000iops)", runnerKeyStr),
+									Severity: SeverityWarning,
+								})
+							}
+						}
+					}
+				}
+			} else if keyStr == "pools" {
+				// Check pools map
+				if poolsMap, ok := value.(map[interface{}]interface{}); ok {
+					for poolKey, poolValue := range poolsMap {
+						poolKeyStr, ok := poolKey.(string)
+						if !ok {
+							continue
+						}
+						if poolSpec, ok := poolValue.(map[interface{}]interface{}); ok {
+							if _, hasEnvironment := poolSpec["environment"]; hasEnvironment {
+								warnings = append(warnings, Diagnostic{
+									Path:     sourceName,
+									Line:     0,
+									Column:   0,
+									Message:  fmt.Sprintf("field 'pools.%s.environment' is deprecated, use 'env' instead", poolKeyStr),
 									Severity: SeverityWarning,
 								})
 							}

@@ -32,7 +32,7 @@ package schema
 	// Optional unique identifier for the runner
 	id?: string
 
-	// CPU count(s) - can be single int, string (e.g., "2+4"), or array
+	// CPU count(s) - can be single int/float, string (e.g., "2+4"), or array
 	cpu?: #IntArray
 
 	// RAM in GB - can be single int, string (e.g., "16+32"), or array
@@ -113,13 +113,16 @@ package schema
 // PoolSpec defines a pool configuration
 #PoolSpec: {
 	// Pool name (required, must match pattern)
-	name: string & =~"^[a-z0-9_-]+$"
+	name?: string & =~"^[a-z0-9_-]+$"
 
 	// Pool version
 	version?: string
 
 	// Environment name (defaults to "production" if not set)
 	env?: string
+
+	// Environment name (DEPRECATED: use env instead)
+	environment?: string
 
 	// Timezone (defaults to "UTC" if not set)
 	timezone?: string
@@ -158,9 +161,10 @@ package schema
 	time?: [...string]
 }
 
-// IntArray can be a single int, string representation, or array
+// IntArray can be a single int/float, string representation, or array
 // String values can use "+" separator (e.g., "2+4" is equivalent to [2, 4])
-#IntArray: int | string | [...int] | [...string]
+// Float values are allowed (e.g., 0.5 for half a CPU core)
+#IntArray: number | string | [...number] | [...string]
 
 // StringArray can be a single string or array of strings
 // String values can use "+" separator (e.g., "s3-cache+tmpfs" is equivalent to ["s3-cache", "tmpfs"])

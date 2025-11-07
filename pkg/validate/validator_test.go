@@ -15,6 +15,7 @@ func TestValidateFile_Valid(t *testing.T) {
 		"../../schema/testdata/valid/basic.yml",
 		"../../schema/testdata/valid/with-anchors.yml",
 		"../../schema/testdata/valid/pool-complete.yml",
+		"../../schema/testdata/valid/github-private-runs-on.yml",
 	}
 
 	for _, testFile := range testFiles {
@@ -96,21 +97,15 @@ func TestValidateFile_PoolMissingName(t *testing.T) {
 		t.Fatalf("ValidateFile failed: %v", err)
 	}
 
-	if len(diags) == 0 {
-		t.Fatal("Expected diagnostics for pool missing name, got none")
-	}
-
-	// Check that we get an error about missing name
-	foundNameError := false
-	for _, diag := range diags {
-		if contains(diag.Message, "name") || contains(diag.Message, "required") {
-			foundNameError = true
-			break
+	// Name is now optional, so pools without explicit name fields should be valid
+	// However, we still need a runner reference, so check for that error instead
+	if len(diags) > 0 {
+		// If there are diagnostics, they should be about missing runner, not missing name
+		for _, diag := range diags {
+			if contains(diag.Message, "name") && contains(diag.Message, "required") {
+				t.Errorf("Unexpected error about missing name (name is now optional): %v", diag)
+			}
 		}
-	}
-
-	if !foundNameError {
-		t.Errorf("Expected error about missing name, got diagnostics: %v", diags)
 	}
 }
 

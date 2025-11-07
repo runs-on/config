@@ -49,8 +49,16 @@ func main() {
 		os.Exit(1)
 	}
 
+	// Count errors (warnings don't cause failure)
+	errorCount := 0
+	for _, diag := range diags {
+		if diag.Severity == validate.SeverityError {
+			errorCount++
+		}
+	}
+
 	exitCode := 0
-	if len(diags) > 0 {
+	if errorCount > 0 {
 		exitCode = 1
 	}
 
@@ -71,17 +79,69 @@ func main() {
 
 func outputText(diags []validate.Diagnostic) {
 	if len(diags) == 0 {
-		fmt.Println("OK")
+		fmt.Println("✓ No issues found")
 		return
 	}
 
+	// Separate errors and warnings
+	var errors []validate.Diagnostic
+	var warnings []validate.Diagnostic
+
 	for _, diag := range diags {
-		loc := diag.Path
-		if diag.Line > 0 {
-			loc = fmt.Sprintf("%s:%d:%d", diag.Path, diag.Line, diag.Column)
+		if diag.Severity == validate.SeverityError {
+			errors = append(errors, diag)
+		} else {
+			warnings = append(warnings, diag)
 		}
-		fmt.Printf("%s: %s: %s\n", loc, diag.Severity, diag.Message)
 	}
+
+	// Print errors first
+	if len(errors) > 0 {
+		fmt.Printf("\n✗ Found %d error(s):\n\n", len(errors))
+		for i, diag := range errors {
+			loc := formatLocation(diag)
+			fmt.Printf("  %d. %s\n", i+1, loc)
+			fmt.Printf("     %s\n", diag.Message)
+			if i < len(errors)-1 {
+				fmt.Println()
+			}
+		}
+	}
+
+	// Print warnings
+	if len(warnings) > 0 {
+		if len(errors) > 0 {
+			fmt.Println()
+		}
+		fmt.Printf("⚠ Found %d warning(s):\n\n", len(warnings))
+		for i, diag := range warnings {
+			loc := formatLocation(diag)
+			fmt.Printf("  %d. %s\n", i+1, loc)
+			fmt.Printf("     %s\n", diag.Message)
+			if i < len(warnings)-1 {
+				fmt.Println()
+			}
+		}
+	}
+
+	// Print summary
+	fmt.Println()
+	if len(errors) > 0 {
+		fmt.Printf("✗ Validation failed with %d error(s)", len(errors))
+		if len(warnings) > 0 {
+			fmt.Printf(" and %d warning(s)", len(warnings))
+		}
+		fmt.Println()
+	} else {
+		fmt.Printf("✓ Validation passed with %d warning(s)\n", len(warnings))
+	}
+}
+
+func formatLocation(diag validate.Diagnostic) string {
+	if diag.Line > 0 {
+		return fmt.Sprintf("%s:%d:%d", diag.Path, diag.Line, diag.Column)
+	}
+	return diag.Path
 }
 
 func outputJSON(diags []validate.Diagnostic) {

@@ -30,7 +30,7 @@ eval "$(mise activate bash)"  # for bash
 │   ├── validate/        # Go validation package
 │   └── schemajson/      # JSON schema access
 ├── cmd/
-│   └── runs-on-config-lint/  # CLI linter binary
+│   └── lint/  # CLI linter binary
 └── .github/
     └── workflows/      # CI/CD workflows
 ```
@@ -59,7 +59,7 @@ When adding new fields to the schema:
 - Follow semantic versioning (v0.1.0, v0.2.0, etc.)
 - Tag releases in git
 - Update version strings in:
-  - `cmd/runs-on-config-lint/main.go`
+  - `cmd/lint/main.go`
   - `cli/internal/cli/lint.go` (SARIF output)
 
 ## Testing
