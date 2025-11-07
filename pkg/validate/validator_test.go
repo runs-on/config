@@ -91,25 +91,6 @@ func TestValidateFile_PoolMissingRunner(t *testing.T) {
 	}
 }
 
-func TestValidateFile_PoolMissingName(t *testing.T) {
-	testFile := "../../schema/testdata/invalid/pool-missing-name.yml"
-	diags, err := validate.ValidateFile(context.Background(), testFile)
-	if err != nil {
-		t.Fatalf("ValidateFile failed: %v", err)
-	}
-
-	// Name is now optional, so pools without explicit name fields should be valid
-	// However, we still need a runner reference, so check for that error instead
-	if len(diags) > 0 {
-		// If there are diagnostics, they should be about missing runner, not missing name
-		for _, diag := range diags {
-			if contains(diag.Message, "name") && contains(diag.Message, "required") {
-				t.Errorf("Unexpected error about missing name (name is now optional): %v", diag)
-			}
-		}
-	}
-}
-
 func TestValidateFile_PoolInvalidSchedule(t *testing.T) {
 	testFile := "../../schema/testdata/invalid/pool-invalid-schedule.yml"
 	diags, err := validate.ValidateFile(context.Background(), testFile)
@@ -266,7 +247,6 @@ images:
 
 pools:
   test-pool:
-    name: test-pool
     runner: test-runner
     schedule:
       - name: default
@@ -307,7 +287,6 @@ images:
 
 pools:
   test-pool:
-    name: test-pool
     runner: test-runner
     schedule:
       - name: default
@@ -344,7 +323,6 @@ func TestValidateReader_RunnerWithDebug(t *testing.T) {
 
 pools:
   test-pool:
-    name: test-pool
     runner: test-runner
     schedule:
       - name: default
@@ -408,7 +386,6 @@ func TestValidateReader_RunnerAllFields(t *testing.T) {
 
 pools:
   test-pool:
-    name: test-pool
     runner: comprehensive-runner
     schedule:
       - name: default
@@ -860,7 +837,6 @@ func TestValidateReader_EachTopLevelField(t *testing.T) {
     family: [c7a]
 pools:
   test-pool:
-    name: test-pool
     runner: test-runner
     schedule:
       - name: default

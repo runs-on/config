@@ -6,7 +6,6 @@ runners:
 
 pools:
   invalid-pool:
-    name: "Invalid Pool Name"
     runner: ""
     schedule:
       - name: test

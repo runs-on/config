@@ -1,6 +1,5 @@
 pools:
   missing-runner:
-    name: test-pool
     schedule:
       - name: default
         hot: 1

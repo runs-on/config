@@ -6,7 +6,6 @@ runners:
 
 pools:
   invalid-indent:
-name: test-pool
 runner: test-runner
 schedule:
   - name: default

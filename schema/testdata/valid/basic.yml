@@ -22,7 +22,6 @@ images:
 
 pools:
   dependabot:
-    name: dependabot
     env: production
     timezone: UTC
     runner: small-x64

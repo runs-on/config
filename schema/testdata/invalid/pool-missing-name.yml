@@ -1,8 +1,0 @@
-pools:
-  missing-name:
-    runner: test-runner
-    schedule:
-      - name: default
-        hot: 1
-        stopped: 2
-

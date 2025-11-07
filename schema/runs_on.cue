@@ -113,12 +113,9 @@ package schema
 	}
 }
 
-// PoolSpec defines a pool configuration
-#PoolSpec: {
-	// Pool name (required, must match pattern)
-	name?: string & =~"^[a-z0-9_-]+$"
-
-	// Pool version
+	// PoolSpec defines a pool configuration
+	#PoolSpec: {
+		// Pool version
 	version?: string
 
 	// Environment name (defaults to "production" if not set)

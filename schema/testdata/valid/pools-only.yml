@@ -7,7 +7,6 @@ runners:
 
 pools:
   test-pool:
-    name: test-pool
     runner: test-runner
     schedule:
       - name: default
