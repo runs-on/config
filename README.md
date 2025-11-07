@@ -63,12 +63,13 @@ runs-on-config-lint --format sarif path/to/runs-on.yml
 
 ### RunsOn CLI Integration
 
-The `roc` CLI includes a `lint` command:
+The [`roc` CLI](https://github.com/runs-on/cli) includes a `lint` command:
 
 ```bash
 roc lint path/to/runs-on.yml
 roc lint --format json path/to/runs-on.yml
 roc lint --stdin < runs-on.yml
+roc lint # will find config files in current tree
 ```
 
 ## Schema Structure
@@ -80,6 +81,8 @@ The `runs-on.yml` file supports:
 - `images`: Map of image specifications  
 - `pools`: Map of pool specifications
 - `admins`: List of admin usernames (array of strings)
+
+Custom top-level attributes are also supported, for example for use with YAML anchors. However they should be prefixed with `x-` or some other prefix, as to not conflict with future top-level attributes of RunsOn.
 
 ### Runner Specification
 
