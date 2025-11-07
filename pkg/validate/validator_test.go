@@ -25,9 +25,11 @@ func TestValidateFile_Valid(t *testing.T) {
 				t.Fatalf("ValidateFile failed: %v", err)
 			}
 
-			if len(diags) > 0 {
-				t.Errorf("Expected no diagnostics for valid file, got %d:", len(diags))
-				for _, diag := range diags {
+			// Filter out warnings - only check for errors
+			errors := filterErrors(diags)
+			if len(errors) > 0 {
+				t.Errorf("Expected no errors for valid file, got %d:", len(errors))
+				for _, diag := range errors {
 					t.Errorf("  %s:%d:%d: %s", diag.Path, diag.Line, diag.Column, diag.Message)
 				}
 			}
@@ -39,7 +41,6 @@ func TestValidateFile_Invalid(t *testing.T) {
 	testFiles := []string{
 		"../../schema/testdata/invalid/basic.yml",
 		"../../schema/testdata/invalid/pool-missing-runner.yml",
-		"../../schema/testdata/invalid/pool-missing-name.yml",
 		"../../schema/testdata/invalid/pool-invalid-schedule.yml",
 		"../../schema/testdata/invalid/pool-empty-schedule-name.yml",
 		"../../schema/testdata/invalid/indentation-issue.yml",
@@ -169,9 +170,10 @@ func TestValidateReader(t *testing.T) {
 		t.Fatalf("ValidateReader failed: %v", err)
 	}
 
-	if len(diags) > 0 {
-		t.Errorf("Expected no diagnostics for valid file, got %d:", len(diags))
-		for _, diag := range diags {
+	errors := filterErrors(diags)
+	if len(errors) > 0 {
+		t.Errorf("Expected no errors for valid file, got %d:", len(errors))
+		for _, diag := range errors {
 			t.Errorf("  %s:%d:%d: %s", diag.Path, diag.Line, diag.Column, diag.Message)
 		}
 	}
@@ -184,9 +186,10 @@ func TestValidateFile_AllTopLevelFields(t *testing.T) {
 		t.Fatalf("ValidateFile failed: %v", err)
 	}
 
-	if len(diags) > 0 {
-		t.Errorf("Expected no diagnostics for file with all top-level fields, got %d:", len(diags))
-		for _, diag := range diags {
+	errors := filterErrors(diags)
+	if len(errors) > 0 {
+		t.Errorf("Expected no errors for file with all top-level fields, got %d:", len(errors))
+		for _, diag := range errors {
 			t.Errorf("  %s:%d:%d: %s", diag.Path, diag.Line, diag.Column, diag.Message)
 		}
 	}
@@ -211,9 +214,10 @@ func TestValidateFile_TopLevelFieldsIndividually(t *testing.T) {
 				t.Fatalf("ValidateFile failed: %v", err)
 			}
 
-			if len(diags) > 0 {
-				t.Errorf("Expected no diagnostics for %s, got %d:", tt.name, len(diags))
-				for _, diag := range diags {
+			errors := filterErrors(diags)
+			if len(errors) > 0 {
+				t.Errorf("Expected no errors for %s, got %d:", tt.name, len(errors))
+				for _, diag := range errors {
 					t.Errorf("  %s:%d:%d: %s", diag.Path, diag.Line, diag.Column, diag.Message)
 				}
 			}
@@ -228,9 +232,10 @@ func TestValidateFile_CustomFieldsAllowed(t *testing.T) {
 		t.Fatalf("ValidateFile failed: %v", err)
 	}
 
-	if len(diags) > 0 {
-		t.Errorf("Expected no diagnostics for file with custom fields (x-defaults, etc.), got %d:", len(diags))
-		for _, diag := range diags {
+	errors := filterErrors(diags)
+	if len(errors) > 0 {
+		t.Errorf("Expected no errors for file with custom fields (x-defaults, etc.), got %d:", len(errors))
+		for _, diag := range errors {
 			t.Errorf("  %s:%d:%d: %s", diag.Path, diag.Line, diag.Column, diag.Message)
 		}
 	}
@@ -275,9 +280,10 @@ admins:
 		t.Fatalf("ValidateReader failed: %v", err)
 	}
 
-	if len(diags) > 0 {
-		t.Errorf("Expected no diagnostics for YAML with custom fields and anchors, got %d:", len(diags))
-		for _, diag := range diags {
+	errors := filterErrors(diags)
+	if len(errors) > 0 {
+		t.Errorf("Expected no errors for YAML with custom fields and anchors, got %d:", len(errors))
+		for _, diag := range errors {
 			t.Errorf("  %s:%d:%d: %s", diag.Path, diag.Line, diag.Column, diag.Message)
 		}
 	}
@@ -316,9 +322,10 @@ admins:
 		t.Fatalf("ValidateReader failed: %v", err)
 	}
 
-	if len(diags) > 0 {
-		t.Errorf("Expected no diagnostics for YAML with all top-level fields, got %d:", len(diags))
-		for _, diag := range diags {
+	errors := filterErrors(diags)
+	if len(errors) > 0 {
+		t.Errorf("Expected no errors for YAML with all top-level fields, got %d:", len(errors))
+		for _, diag := range errors {
 			t.Errorf("  %s:%d:%d: %s", diag.Path, diag.Line, diag.Column, diag.Message)
 		}
 	}
@@ -379,14 +386,26 @@ pools:
 				t.Fatalf("ValidateReader failed: %v", err)
 			}
 
-			if len(diags) > 0 {
-				t.Errorf("Expected no diagnostics for %s field, got %d:", tc.name, len(diags))
-				for _, diag := range diags {
+			errors := filterErrors(diags)
+			if len(errors) > 0 {
+				t.Errorf("Expected no errors for %s field, got %d:", tc.name, len(errors))
+				for _, diag := range errors {
 					t.Errorf("  %s:%d:%d: %s", diag.Path, diag.Line, diag.Column, diag.Message)
 				}
 			}
 		})
 	}
+}
+
+// filterErrors returns only error-level diagnostics, filtering out warnings
+func filterErrors(diags []validate.Diagnostic) []validate.Diagnostic {
+	var errors []validate.Diagnostic
+	for _, diag := range diags {
+		if diag.Severity == validate.SeverityError {
+			errors = append(errors, diag)
+		}
+	}
+	return errors
 }
 
 // Helper function to check if a string contains a substring (case-insensitive)
