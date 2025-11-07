@@ -39,12 +39,15 @@ jobs:
       - name: Fix CUE module
         run: mise exec -- cue mod fix
       
+      - name: Tidy dependencies
+        run: mise exec -- go mod tidy
+      
       - name: Generate schema
         run: make gen
       
       - name: Check for schema.json changes
         run: |
-          if [ -n "$(git status --porcelain schema/schema.json)" ]; then
+          if [ -n "$(git status --porcelain schema/schema.json pkg/schemajson/schema.json)" ]; then
             echo "Error: schema.json is out of date. Run 'make gen' and commit the changes."
             exit 1
           fi

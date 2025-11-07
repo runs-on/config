@@ -3,6 +3,8 @@
 gen:
 	@echo "Generating JSON schema from CUE..."
 	@cd schema && mise exec -- go generate
+	@echo "Copying schema.json to pkg/schemajson..."
+	@cp schema/schema.json pkg/schemajson/schema.json
 	@echo "Syncing schema.cue to pkg/validate..."
 	@cp schema/runs_on.cue pkg/validate/schema.cue
 
@@ -24,5 +26,5 @@ install:
 
 clean:
 	@echo "Cleaning generated files..."
-	@rm -f schema/schema.json
+	@rm -f schema/schema.json pkg/schemajson/schema.json
 

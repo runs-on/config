@@ -4,7 +4,7 @@ import (
 	_ "embed"
 )
 
-//go:embed ../../schema/schema.json
+//go:embed schema.json
 var schemaJSON []byte
 
 // Schema returns the JSON schema as bytes
