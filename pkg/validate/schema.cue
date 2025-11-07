@@ -22,6 +22,9 @@ package schema
 
 	// List of admin usernames
 	admins?: [...string]
+
+	// Allow additional fields (for forward compatibility)
+	...
 }
 
 // RunnerSpec defines a runner configuration
