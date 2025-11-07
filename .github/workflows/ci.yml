@@ -47,12 +47,15 @@ jobs:
       
       - name: Check for schema.json changes
         run: |
-          git add schema/schema.json pkg/schemajson/schema.json 2>/dev/null || true
-          if [ -n "$(git status --porcelain schema/schema.json pkg/schemajson/schema.json)" ]; then
+          # Stage all generated files
+          git add schema/schema.json pkg/schemajson/schema.json go.mod go.sum cue.mod/module.cue 2>/dev/null || true
+          # Only check schema.json files - other files (go.mod, go.sum, module.cue) are expected to change
+          if [ -n "$(git diff --cached --name-only schema/schema.json pkg/schemajson/schema.json 2>/dev/null)" ]; then
             echo "Error: schema.json is out of date. Run 'make gen' and commit the changes."
-            git status
+            git diff --cached schema/schema.json pkg/schemajson/schema.json
             exit 1
           fi
+          echo "Schema files are up to date"
       
       - name: Run tests
         run: make test
