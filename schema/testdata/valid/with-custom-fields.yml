@@ -1,0 +1,31 @@
+# Test config with YAML anchors and custom top-level fields
+x-defaults: &defaults
+  cpu: [2]
+  ram: [16]
+  family: [c7a]
+
+custom-field: "some value"
+another-custom: 
+  nested: value
+
+runners:
+  test-runner:
+    <<: *defaults
+    image: ubuntu22-full-x64
+
+images:
+  test-image:
+    ami: ami-1234567890abcdef0
+
+pools:
+  test-pool:
+    name: test-pool
+    runner: test-runner
+    schedule:
+      - name: default
+        hot: 1
+        stopped: 2
+
+admins:
+  - admin1
+

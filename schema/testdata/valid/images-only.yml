@@ -1,0 +1,5 @@
+# Test config with only images
+images:
+  test-image:
+    ami: ami-1234567890abcdef0
+

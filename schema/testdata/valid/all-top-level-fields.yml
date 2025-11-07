@@ -1,0 +1,25 @@
+_extends: ".github-private"
+
+runners:
+  test-runner:
+    cpu: [2]
+    ram: [16]
+    family: [c7a]
+
+images:
+  test-image:
+    ami: ami-1234567890abcdef0
+
+pools:
+  test-pool:
+    name: test-pool
+    runner: test-runner
+    schedule:
+      - name: default
+        hot: 1
+        stopped: 2
+
+admins:
+  - admin1
+  - admin2
+

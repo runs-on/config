@@ -1,0 +1,7 @@
+# Test config with only runners
+runners:
+  test-runner:
+    cpu: [2]
+    ram: [16]
+    family: [c7a]
+

@@ -1,0 +1,5 @@
+# Test config with only admins
+admins:
+  - admin1
+  - admin2
+
