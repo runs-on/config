@@ -334,6 +334,39 @@ admins:
 	}
 }
 
+func TestValidateReader_RunnerWithDebug(t *testing.T) {
+	yamlContent := `runners:
+  test-runner:
+    cpu: [2]
+    ram: [16]
+    family: [c7a]
+    debug: true
+
+pools:
+  test-pool:
+    name: test-pool
+    runner: test-runner
+    schedule:
+      - name: default
+        hot: 1
+        stopped: 2
+`
+
+	reader := strings.NewReader(yamlContent)
+	diags, err := validate.ValidateReader(context.Background(), reader, "test.yml")
+	if err != nil {
+		t.Fatalf("ValidateReader failed: %v", err)
+	}
+
+	errors := filterErrors(diags)
+	if len(errors) > 0 {
+		t.Errorf("Expected no errors for runner with debug: true, got %d:", len(errors))
+		for _, diag := range errors {
+			t.Errorf("  %s:%d:%d: %s", diag.Path, diag.Line, diag.Column, diag.Message)
+		}
+	}
+}
+
 func TestValidateReader_EachTopLevelField(t *testing.T) {
 	testCases := []struct {
 		name        string

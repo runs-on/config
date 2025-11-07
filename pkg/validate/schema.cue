@@ -73,6 +73,9 @@ package schema
 
 	// Tags for the runner
 	tags?: #StringArray
+
+	// Debug mode (bool or string "true"/"false")
+	debug?: #BoolOrString
 }
 
 // ImageSpec defines an image configuration
