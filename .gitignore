@@ -31,5 +31,5 @@ go.work
 Thumbs.db
 
 # Generated files
-schema/schema.json
+# schema/schema.json - committed to repo per DEVELOPMENT.md
 
