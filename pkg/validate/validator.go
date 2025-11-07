@@ -11,7 +11,7 @@ import (
 	"cuelang.org/go/cue"
 	"cuelang.org/go/cue/cuecontext"
 	"cuelang.org/go/cue/errors"
-	"cuelang.org/go/pkg/encoding/yaml"
+	"gopkg.in/yaml.v3"
 )
 
 //go:embed schema.cue
