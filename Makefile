@@ -2,6 +2,7 @@
 
 gen:
 	@echo "Generating JSON schema from CUE..."
+	@rm -f schema/schema.json pkg/schemajson/schema.json
 	@cd schema && mise exec -- go generate
 	@echo "Copying schema.json to pkg/schemajson..."
 	@cp schema/schema.json pkg/schemajson/schema.json
