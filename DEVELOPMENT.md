@@ -1,5 +1,23 @@
 # Developer Guide
 
+## Setup
+
+### Initial Setup
+
+```bash
+# Install dependencies (Go, CUE CLI, golangci-lint)
+make setup
+
+# Or manually:
+mise install
+```
+
+**Note**: Make sure mise is activated in your shell. Add this to your shell config:
+```bash
+eval "$(mise activate zsh)"  # for zsh
+eval "$(mise activate bash)"  # for bash
+```
+
 ## Project Structure
 
 ```

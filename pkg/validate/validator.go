@@ -93,8 +93,29 @@ func ValidateReader(ctx context.Context, r io.Reader, sourceName string) ([]Diag
 	// Unify with schema and validate
 	unified := schema.Unify(dataValue)
 	var schemaErrors []Diagnostic
+	
+	// Validate for type errors and constraint violations
 	if err := unified.Validate(); err != nil {
 		schemaErrors = convertCueErrors(err, sourceName)
+	}
+	
+	// Check for missing required fields (incomplete values)
+	// CUE's Validate() doesn't catch missing required fields by default,
+	// so we need to explicitly check for incomplete/concrete errors
+	if err := unified.Validate(cue.Concrete(true)); err != nil {
+		// Only add errors that aren't already captured by the first Validate()
+		// Check if this is a different set of errors
+		incompleteErrors := convertCueErrors(err, sourceName)
+		// Add incomplete errors that aren't duplicates
+		existingMsgs := make(map[string]bool)
+		for _, diag := range schemaErrors {
+			existingMsgs[diag.Message] = true
+		}
+		for _, diag := range incompleteErrors {
+			if !existingMsgs[diag.Message] {
+				schemaErrors = append(schemaErrors, diag)
+			}
+		}
 	}
 
 	// Check for deprecated fields and add warnings

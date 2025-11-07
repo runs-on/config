@@ -21,9 +21,7 @@ jobs:
         uses: jdx/mise-action@v2
       
       - name: Install CUE
-        run: |
-          mise install
-          mise exec -- go install cuelang.org/go/cmd/cue@latest
+        run: make setup
       
       - name: Cache Go modules
         uses: actions/cache@v4
@@ -35,14 +33,6 @@ jobs:
       
       - name: Download dependencies
         run: mise exec -- go mod download
-      
-      - name: Fix CUE module
-        run: mise exec -- cue mod fix
-      
-      - name: Tidy dependencies
-        env:
-          GOSUMDB: sum.golang.org
-        run: mise exec -- go mod tidy
       
       - name: Generate schema
         run: make gen

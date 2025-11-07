@@ -13,6 +13,22 @@ The RunsOn config schema defines the structure and validation rules for reposito
 
 ## Installation
 
+### Prerequisites
+
+- [mise](https://mise.jdx.dev/) (formerly rtx) - for managing tool versions
+- Go 1.23+ (installed via mise)
+
+### Setup
+
+```bash
+# Install dependencies
+make setup
+
+# Or manually:
+mise install
+mise exec -- go install cuelang.org/go/cmd/cue@latest
+```
+
 ### Go Library
 
 ```bash

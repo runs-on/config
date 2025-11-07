@@ -9,7 +9,7 @@ pools:
     name: test-pool
     runner: test-runner
     schedule:
-    - name: default
+      - name: default
       hot: 1
-      stopped: 2
+        stopped: 2
 

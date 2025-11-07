@@ -136,8 +136,8 @@ package schema
 
 // PoolSchedule defines a schedule entry for a pool
 #PoolSchedule: {
-	// Schedule name
-	name: string
+	// Schedule name (required, cannot be empty)
+	name: string & != ""
 
 	// Number of stopped instances
 	stopped: int & >=0
