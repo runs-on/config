@@ -14,7 +14,7 @@ import (
 	"cuelang.org/go/pkg/encoding/yaml"
 )
 
-//go:embed ../../schema/runs_on.cue
+//go:embed schema.cue
 var schemaFS embed.FS
 
 // Diagnostic represents a validation error or warning
@@ -93,9 +93,9 @@ func loadSchema() (cue.Value, error) {
 	// Try to load embedded schema first
 	var schemaData []byte
 	var err error
-	schemaData, err = schemaFS.ReadFile("schema/runs_on.cue")
+	schemaData, err = schemaFS.ReadFile("schema.cue")
 	if err != nil {
-		// Fallback to file system
+		// Fallback to file system (for development)
 		paths := []string{"schema/runs_on.cue", "../../schema/runs_on.cue", "runs_on.cue"}
 		for _, path := range paths {
 			if data, err := os.ReadFile(path); err == nil {
