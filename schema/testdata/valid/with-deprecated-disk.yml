@@ -1,0 +1,7 @@
+runners:
+  test-runner-with-disk:
+    cpu: 2
+    ram: 16
+    disk: large
+    family: [c7a]
+

@@ -92,11 +92,18 @@ func ValidateReader(ctx context.Context, r io.Reader, sourceName string) ([]Diag
 
 	// Unify with schema and validate
 	unified := schema.Unify(dataValue)
+	var schemaErrors []Diagnostic
 	if err := unified.Validate(); err != nil {
-		return convertCueErrors(err, sourceName), nil
+		schemaErrors = convertCueErrors(err, sourceName)
 	}
 
-	return []Diagnostic{}, nil
+	// Check for deprecated fields and add warnings
+	deprecationWarnings := checkDeprecatedFields(yamlData, sourceName, data)
+
+	// Combine schema errors and deprecation warnings
+	allDiagnostics := append(schemaErrors, deprecationWarnings...)
+
+	return allDiagnostics, nil
 }
 
 // loadSchema loads and compiles the CUE schema
@@ -166,6 +173,145 @@ func convertCueErrors(err error, sourceName string) []Diagnostic {
 	}
 
 	return diagnostics
+}
+
+// checkDeprecatedFields checks for deprecated fields and returns warnings
+func checkDeprecatedFields(yamlData interface{}, sourceName string, originalYAML []byte) []Diagnostic {
+	var warnings []Diagnostic
+
+	// Parse YAML with line information to get accurate line numbers
+	var yamlNode yaml.Node
+	if err := yaml.Unmarshal(originalYAML, &yamlNode); err != nil {
+		// If we can't parse with line info, skip line numbers
+		return checkDeprecatedFieldsRecursive(yamlData, sourceName, "")
+	}
+
+	// Check for deprecated disk field in runners
+	if yamlNode.Kind == yaml.DocumentNode && len(yamlNode.Content) > 0 {
+		root := yamlNode.Content[0]
+		if root.Kind == yaml.MappingNode {
+			for i := 0; i < len(root.Content); i += 2 {
+				if i+1 >= len(root.Content) {
+					break
+				}
+				keyNode := root.Content[i]
+				valueNode := root.Content[i+1]
+				if keyNode.Value == "runners" && valueNode.Kind == yaml.MappingNode {
+					// Found runners map, check each runner
+					for j := 0; j < len(valueNode.Content); j += 2 {
+						if j+1 >= len(valueNode.Content) {
+							break
+						}
+						_ = valueNode.Content[j] // runner key node (not used, but needed for iteration)
+						runnerValueNode := valueNode.Content[j+1]
+						if runnerValueNode.Kind == yaml.MappingNode {
+							// Check if this runner has a disk field
+							for k := 0; k < len(runnerValueNode.Content); k += 2 {
+								if k >= len(runnerValueNode.Content) {
+									break
+								}
+								fieldKeyNode := runnerValueNode.Content[k]
+								if fieldKeyNode.Value == "disk" {
+									// Found deprecated disk field
+									warnings = append(warnings, Diagnostic{
+										Path:     sourceName,
+										Line:     fieldKeyNode.Line,
+										Column:   fieldKeyNode.Column,
+										Message:  fmt.Sprintf("field 'disk' is deprecated, use 'volume' instead (e.g., volume=80gb:gp3:125mbs:3000iops)"),
+										Severity: SeverityWarning,
+									})
+								}
+							}
+						}
+					}
+				}
+			}
+		}
+	}
+
+	return warnings
+}
+
+// checkDeprecatedFieldsRecursive is a fallback that checks without line numbers
+func checkDeprecatedFieldsRecursive(data interface{}, sourceName string, path string) []Diagnostic {
+	var warnings []Diagnostic
+
+	switch v := data.(type) {
+	case map[string]interface{}:
+		for key, value := range v {
+			currentPath := path
+			if currentPath != "" {
+				currentPath += "."
+			}
+			currentPath += key
+
+			if key == "runners" {
+				// Check runners map
+				if runnersMap, ok := value.(map[string]interface{}); ok {
+					for runnerKey, runnerValue := range runnersMap {
+						if runnerSpec, ok := runnerValue.(map[string]interface{}); ok {
+							if _, hasDisk := runnerSpec["disk"]; hasDisk {
+								warnings = append(warnings, Diagnostic{
+									Path:     sourceName,
+									Line:     0,
+									Column:   0,
+									Message:  fmt.Sprintf("field 'runners.%s.disk' is deprecated, use 'volume' instead (e.g., volume=80gb:gp3:125mbs:3000iops)", runnerKey),
+									Severity: SeverityWarning,
+								})
+							}
+						}
+					}
+				}
+			} else {
+				// Recurse into nested structures
+				warnings = append(warnings, checkDeprecatedFieldsRecursive(value, sourceName, currentPath)...)
+			}
+		}
+	case map[interface{}]interface{}:
+		for key, value := range v {
+			keyStr, ok := key.(string)
+			if !ok {
+				continue
+			}
+			currentPath := path
+			if currentPath != "" {
+				currentPath += "."
+			}
+			currentPath += keyStr
+
+			if keyStr == "runners" {
+				// Check runners map
+				if runnersMap, ok := value.(map[interface{}]interface{}); ok {
+					for runnerKey, runnerValue := range runnersMap {
+						runnerKeyStr, ok := runnerKey.(string)
+						if !ok {
+							continue
+						}
+						if runnerSpec, ok := runnerValue.(map[interface{}]interface{}); ok {
+							if _, hasDisk := runnerSpec["disk"]; hasDisk {
+								warnings = append(warnings, Diagnostic{
+									Path:     sourceName,
+									Line:     0,
+									Column:   0,
+									Message:  fmt.Sprintf("field 'runners.%s.disk' is deprecated, use 'volume' instead (e.g., volume=80gb:gp3:125mbs:3000iops)", runnerKeyStr),
+									Severity: SeverityWarning,
+								})
+							}
+						}
+					}
+				}
+			} else {
+				// Recurse into nested structures
+				warnings = append(warnings, checkDeprecatedFieldsRecursive(value, sourceName, currentPath)...)
+			}
+		}
+	case []interface{}:
+		for i, item := range v {
+			warnings = append(warnings, checkDeprecatedFieldsRecursive(item, sourceName, fmt.Sprintf("%s[%d]", path, i))...)
+		}
+	}
+
+	return warnings
 }
 
 // normalizeSpotValues recursively normalizes boolean spot values to strings
