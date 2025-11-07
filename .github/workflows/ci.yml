@@ -47,8 +47,10 @@ jobs:
       
       - name: Check for schema.json changes
         run: |
+          git add schema/schema.json pkg/schemajson/schema.json 2>/dev/null || true
           if [ -n "$(git status --porcelain schema/schema.json pkg/schemajson/schema.json)" ]; then
             echo "Error: schema.json is out of date. Run 'make gen' and commit the changes."
+            git status
             exit 1
           fi
       
