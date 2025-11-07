@@ -1,0 +1,17 @@
+runners:
+  test-runner:
+    cpu: [2]
+    ram: [16]
+    family: [c7a]
+
+pools:
+  test-pool:
+    runner: test-runner
+  "Invalid Pool Name":
+    runner: test-runner
+  "pool-with-émojis-🚀":
+    runner: test-runner
+  TestPool:
+    runner: test-runner
+  pool_with_123:
+    runner: test-runner

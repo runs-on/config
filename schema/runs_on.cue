@@ -17,7 +17,7 @@ package schema
 
 	// Map of pool specifications
 	pools?: {
-		[string]: #PoolSpec
+		[=~"^[a-z0-9_-]+$"]: #PoolSpec
 	}
 
 	// List of admin usernames
