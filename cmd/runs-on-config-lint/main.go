@@ -218,3 +218,4 @@ func outputSARIF(diags []validate.Diagnostic) {
 	}
 }
 
+

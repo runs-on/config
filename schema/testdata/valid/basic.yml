@@ -24,7 +24,7 @@ pools:
   dependabot:
     env: production
     timezone: UTC
-    runner: small-x64
+    runner: custom-runner
     max_surge: 5
     schedule:
       - name: default
@@ -40,4 +40,5 @@ pools:
 admins:
   - admin1
   - admin2
+
 
