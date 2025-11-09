@@ -15,6 +15,7 @@ func TestValidateFile_Valid(t *testing.T) {
 		"../../schema/testdata/valid/basic.yml",
 		"../../schema/testdata/valid/with-anchors.yml",
 		"../../schema/testdata/valid/pool-complete.yml",
+		"../../schema/testdata/valid/pool-runner-reference.yml",
 		"../../schema/testdata/valid/github-private-runs-on.yml",
 	}
 
@@ -45,6 +46,7 @@ func TestValidateFile_Invalid(t *testing.T) {
 		"../../schema/testdata/invalid/pool-empty-schedule-name.yml",
 		"../../schema/testdata/invalid/pool-empty.yml",
 		"../../schema/testdata/invalid/pool-non-ascii-name.yml",
+		"../../schema/testdata/invalid/pool-invalid-runner-reference.yml",
 		"../../schema/testdata/invalid/indentation-issue.yml",
 		"../../schema/testdata/invalid/indentation-nested.yml",
 	}

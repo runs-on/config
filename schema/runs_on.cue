@@ -19,6 +19,13 @@ package schema
 	pools?: {
 		[=~"^[a-z0-9_-]+$"]: #PoolSpec
 	}
+	
+	// If pools exist, runners map must exist (cannot be optional)
+	if pools != _|_ {
+		runners: {
+			[string]: #RunnerSpec
+		}
+	}
 
 	// List of admin usernames
 	admins?: [...string]
@@ -137,6 +144,15 @@ package schema
 	max_surge?: int & >=0
 }
 
+// Helper to validate runner exists in runners map
+#ValidateRunnerExists: {
+	runner: string
+	runners: {
+		[string]: #RunnerSpec
+	}
+	_validation: runners[runner] & #RunnerSpec
+}
+
 // PoolSchedule defines a schedule entry for a pool
 #PoolSchedule: {
 	// Schedule name (required, cannot be empty)
@@ -177,6 +193,6 @@ package schema
 // Note: Boolean values (false/true) are automatically normalized to strings ("false"/"true") during validation
 #SpotValue: "false" | "never" | "true" | "pco" | "price-capacity-optimized" | "lp" | "lowest-price" | "co" | "capacity-optimized"
 
-// Main schema entry point
+// Main schema entry point  
 #Config: #RepoConfig
 

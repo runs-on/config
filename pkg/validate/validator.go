@@ -124,8 +124,12 @@ func ValidateReader(ctx context.Context, r io.Reader, sourceName string) ([]Diag
 	// Check for deprecated fields and add warnings
 	deprecationWarnings := checkDeprecatedFields(yamlData, sourceName, data)
 
-	// Combine schema errors and deprecation warnings
+	// Check for invalid runner references in pools
+	runnerReferenceErrors := checkRunnerReferences(yamlData, sourceName, data)
+
+	// Combine all diagnostics
 	allDiagnostics := append(schemaErrors, deprecationWarnings...)
+	allDiagnostics = append(allDiagnostics, runnerReferenceErrors...)
 
 	return allDiagnostics, nil
 }
@@ -197,6 +201,84 @@ func convertCueErrors(err error, sourceName string) []Diagnostic {
 	}
 
 	return diagnostics
+}
+
+// checkRunnerReferences checks that pool runners exist in the runners map
+func checkRunnerReferences(yamlData interface{}, sourceName string, originalYAML []byte) []Diagnostic {
+	var errors []Diagnostic
+
+	// Type assert to map
+	data, ok := yamlData.(map[string]interface{})
+	if !ok {
+		return errors
+	}
+
+	// Check if pools exist
+	poolsRaw, hasPools := data["pools"]
+	if !hasPools {
+		return errors // No pools, nothing to validate
+	}
+
+	pools, ok := poolsRaw.(map[string]interface{})
+	if !ok {
+		return errors
+	}
+
+	// If pools exist, get the runners map
+	runnersRaw, hasRunners := data["runners"]
+	if !hasRunners {
+		// If there are pools but no runners map, that's an error
+		for poolName, poolValue := range pools {
+			if pool, ok := poolValue.(map[string]interface{}); ok {
+				if runnerName, hasRunner := pool["runner"]; hasRunner {
+					errors = append(errors, Diagnostic{
+						Path:     sourceName,
+						Line:     0,
+						Column:   0,
+						Message:  fmt.Sprintf("pool '%s' references runner '%v' but no runners are defined", poolName, runnerName),
+						Severity: SeverityError,
+					})
+				}
+			}
+		}
+		return errors
+	}
+
+	runners, ok := runnersRaw.(map[string]interface{})
+	if !ok {
+		return errors
+	}
+
+	// Check each pool's runner reference
+	for poolName, poolValue := range pools {
+		pool, ok := poolValue.(map[string]interface{})
+		if !ok {
+			continue
+		}
+
+		runnerName, hasRunner := pool["runner"]
+		if !hasRunner {
+			continue // Runner is required by schema, will be caught elsewhere
+		}
+
+		runnerNameStr, ok := runnerName.(string)
+		if !ok {
+			continue // Invalid type, will be caught by schema
+		}
+
+		// Check if the runner exists in the runners map
+		if _, exists := runners[runnerNameStr]; !exists {
+			errors = append(errors, Diagnostic{
+				Path:     sourceName,
+				Line:     0,
+				Column:   0,
+				Message:  fmt.Sprintf("pool '%s' references runner '%s' which is not defined in runners", poolName, runnerNameStr),
+				Severity: SeverityError,
+			})
+		}
+	}
+
+	return errors
 }
 
 // checkDeprecatedFields checks for deprecated fields and returns warnings
