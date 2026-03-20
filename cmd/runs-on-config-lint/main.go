@@ -7,6 +7,7 @@ import (
 	"fmt"
 	"os"
 
+	appversion "github.com/runs-on/config/internal/version"
 	"github.com/runs-on/config/pkg/validate"
 )
 
@@ -24,7 +25,7 @@ func main() {
 	flag.Parse()
 
 	if *version {
-		fmt.Println("runs-on-config-lint v0.1.0")
+		fmt.Printf("runs-on-config-lint %s\n", appversion.String())
 		os.Exit(0)
 	}
 
@@ -124,7 +125,7 @@ func outputJSON(diags []validate.Diagnostic) {
 func outputSARIF(diags []validate.Diagnostic) {
 	// Basic SARIF output - can be enhanced later
 	type sarifLocation struct {
-		URI   string `json:"uri"`
+		URI    string `json:"uri"`
 		Region struct {
 			StartLine   int `json:"startLine,omitempty"`
 			StartColumn int `json:"startColumn,omitempty"`
@@ -132,9 +133,9 @@ func outputSARIF(diags []validate.Diagnostic) {
 	}
 
 	type sarifResult struct {
-		RuleID    string        `json:"ruleId"`
-		Level     string        `json:"level"`
-		Message   struct {
+		RuleID  string `json:"ruleId"`
+		Level   string `json:"level"`
+		Message struct {
 			Text string `json:"text"`
 		} `json:"message"`
 		Locations []struct {
@@ -153,7 +154,7 @@ func outputSARIF(diags []validate.Diagnostic) {
 	}
 
 	type sarifOutput struct {
-		Version string   `json:"version"`
+		Version string     `json:"version"`
 		Runs    []sarifRun `json:"runs"`
 	}
 
@@ -202,7 +203,7 @@ func outputSARIF(diags []validate.Diagnostic) {
 						Version string `json:"version"`
 					}{
 						Name:    "runs-on-config-lint",
-						Version: "0.1.0",
+						Version: appversion.String(),
 					},
 				},
 				Results: results,
@@ -217,5 +218,3 @@ func outputSARIF(diags []validate.Diagnostic) {
 		os.Exit(1)
 	}
 }
-
-

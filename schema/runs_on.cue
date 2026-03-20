@@ -19,7 +19,7 @@ package schema
 	pools?: {
 		[=~"^[a-z0-9_-]+$"]: #PoolSpec
 	}
-	
+
 	// If pools exist, runners map must exist (cannot be optional)
 	if pools != _|_ {
 		runners: {
@@ -78,6 +78,9 @@ package schema
 	// Preinstall script
 	preinstall?: string
 
+	// Prerun script
+	prerun?: string
+
 	// Tags for the runner
 	tags?: #StringArray
 
@@ -104,6 +107,9 @@ package schema
 
 	// Preinstall script
 	preinstall?: string
+
+	// Prerun script
+	prerun?: string
 
 	// AMI ID
 	ami?: string
@@ -193,6 +199,5 @@ package schema
 // Note: Boolean values (false/true) are automatically normalized to strings ("false"/"true") during validation
 #SpotValue: "false" | "never" | "true" | "pco" | "price-capacity-optimized" | "lp" | "lowest-price" | "co" | "capacity-optimized"
 
-// Main schema entry point  
+// Main schema entry point
 #Config: #RepoConfig
-

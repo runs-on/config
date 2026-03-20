@@ -5,10 +5,14 @@ runners:
     cpu: [2]
     ram: [16]
     family: [c7a]
+    prerun: |
+      echo prepare-runner
 
 images:
   test-image:
     ami: ami-1234567890abcdef0
+    prerun: |
+      echo prepare-boot
 
 pools:
   test-pool:
@@ -21,5 +25,3 @@ pools:
 admins:
   - admin1
   - admin2
-
-

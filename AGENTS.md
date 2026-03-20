@@ -2,6 +2,11 @@
 
 This guide helps AI agents understand how to work with this codebase. For detailed developer information, see [DEVELOPMENT.md](./DEVELOPMENT.md).
 
+## Project Context
+
+- Read `../docs/PROJECT_CONTEXT.md` first for product/business context and customer-facing invariants.
+- Schema and validator changes affect the documented `.github/runs-on.yml` contract. Before changing field names or semantics, compare against `../../marketing/src/content/docs/configuration/repo-config.mdx` and the related public docs linked from `../docs/PROJECT_CONTEXT.md`.
+
 ## Quick Reference
 
 ### Key Files
@@ -52,7 +57,7 @@ This guide helps AI agents understand how to work with this codebase. For detail
 The schema defines:
 - `#RepoConfig`: Top-level config structure
 - `#RunnerSpec`: Runner configuration
-- `#ImageSpec`: Image configuration  
+- `#ImageSpec`: Image configuration
 - `#PoolSpec`: Pool configuration (name comes from pool key, not a field)
 - `#PoolSchedule`: Schedule entries within pools
 
@@ -114,4 +119,3 @@ make setup     # Install dependencies
 
 - [DEVELOPMENT.md](./DEVELOPMENT.md) - Full developer guide
 - [README.md](./README.md) - User-facing documentation
-

@@ -357,34 +357,37 @@ func TestValidateReader_RunnerAllFields(t *testing.T) {
     cpu: [2, 4, 8]
     ram: [16, 32]
     family: [c7a, m7a]
-    
+
     # Image and volume
     image: ubuntu22-full-x64
     volume: "80gb:gp3:125mbs:3000iops"
-    
+
     # Deprecated disk field (should still validate but show warning)
     disk: large
-    
+
     # Retry configuration
     retry: ["always", "on-failure"]
-    
+
     # Spot configuration
     spot: "price-capacity-optimized"
-    
+
     # Network and access
     ssh: true
     private: false
-    
+
     # Extras
     extras: ["s3-cache", "ecr-cache", "efs", "tmpfs"]
-    
+
     # Debug mode
     debug: true
-    
+
     # Additional fields
     preinstall: |
       apt-get update
       apt-get install -y docker
+    prerun: |
+      echo prepare-runner
+      systemctl restart docker
     tags: ["Team:DevOps", "Environment:Production"]
     id: custom-runner-id
 
@@ -406,6 +409,42 @@ pools:
 	errors := filterErrors(diags)
 	if len(errors) > 0 {
 		t.Errorf("Expected no errors for runner with all fields, got %d:", len(errors))
+		for _, diag := range errors {
+			t.Errorf("  %s:%d:%d: %s", diag.Path, diag.Line, diag.Column, diag.Message)
+		}
+	}
+}
+
+func TestValidateReader_ImageAllFields(t *testing.T) {
+	yamlContent := `images:
+  comprehensive-image:
+    platform: linux
+    arch: x64
+    name: ubuntu-22.04
+    owner: "123456789012"
+    preinstall: |
+      apt-get update
+      apt-get install -y docker
+    prerun: |
+      echo prepare-boot
+      systemctl restart docker
+    ami: ami-1234567890abcdef0
+    main_disk_size: 120
+    root_device_name: /dev/sda1
+    tags:
+      Team: DevOps
+      Environment: Production
+`
+
+	reader := strings.NewReader(yamlContent)
+	diags, err := validate.ValidateReader(context.Background(), reader, "test.yml")
+	if err != nil {
+		t.Fatalf("ValidateReader failed: %v", err)
+	}
+
+	errors := filterErrors(diags)
+	if len(errors) > 0 {
+		t.Errorf("Expected no errors for image with all fields, got %d:", len(errors))
 		for _, diag := range errors {
 			t.Errorf("  %s:%d:%d: %s", diag.Path, diag.Line, diag.Column, diag.Message)
 		}
@@ -762,6 +801,17 @@ func TestValidateReader_RunnerFieldsIndividually(t *testing.T) {
       apt-get install -y docker`,
 		},
 		{
+			name: "prerun",
+			yamlContent: `runners:
+  test-runner:
+    cpu: [2]
+    ram: [16]
+    family: [c7a]
+    prerun: |
+      echo prepare-runner
+      systemctl restart docker`,
+		},
+		{
 			name: "tags",
 			yamlContent: `runners:
   test-runner:
@@ -801,6 +851,50 @@ func TestValidateReader_RunnerFieldsIndividually(t *testing.T) {
 			errors := filterErrors(diags)
 			if len(errors) > 0 {
 				t.Errorf("Expected no errors for %s, got %d:", tc.name, len(errors))
+				for _, diag := range errors {
+					t.Errorf("  %s:%d:%d: %s", diag.Path, diag.Line, diag.Column, diag.Message)
+				}
+			}
+		})
+	}
+}
+
+func TestValidateReader_ImageFieldsIndividually(t *testing.T) {
+	testCases := []struct {
+		name        string
+		yamlContent string
+	}{
+		{
+			name: "preinstall",
+			yamlContent: `images:
+  test-image:
+    ami: ami-1234567890abcdef0
+    preinstall: |
+      apt-get update
+      apt-get install -y docker`,
+		},
+		{
+			name: "prerun",
+			yamlContent: `images:
+  test-image:
+    ami: ami-1234567890abcdef0
+    prerun: |
+      echo prepare-boot
+      systemctl restart docker`,
+		},
+	}
+
+	for _, tc := range testCases {
+		t.Run(tc.name, func(t *testing.T) {
+			reader := strings.NewReader(tc.yamlContent)
+			diags, err := validate.ValidateReader(context.Background(), reader, "test.yml")
+			if err != nil {
+				t.Fatalf("ValidateReader failed: %v", err)
+			}
+
+			errors := filterErrors(diags)
+			if len(errors) > 0 {
+				t.Errorf("Expected no errors for image %s, got %d:", tc.name, len(errors))
 				for _, diag := range errors {
 					t.Errorf("  %s:%d:%d: %s", diag.Path, diag.Line, diag.Column, diag.Message)
 				}

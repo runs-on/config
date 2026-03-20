@@ -1,4 +1,7 @@
-.PHONY: gen lint test install clean sync-schema setup update-dependents
+VERSION ?= $(shell if [ -f ../VERSION ]; then tr -d '\n' < ../VERSION; elif [ -f VERSION ]; then tr -d '\n' < VERSION; elif git describe --tags --exact-match >/dev/null 2>&1; then git describe --tags --exact-match; else echo dev; fi)
+LDFLAGS = -X github.com/runs-on/config/internal/version.Version=$(VERSION)
+
+.PHONY: gen lint test install clean sync-schema setup update-dependents sync-metadata version
 
 setup:
 	@echo "Installing dependencies with mise..."
@@ -31,7 +34,7 @@ test:
 
 install:
 	@echo "Installing lint..."
-	mise exec -- go install ./cmd/lint
+	mise exec -- go install -ldflags "$(LDFLAGS)" ./cmd/lint
 
 clean:
 	@echo "Cleaning generated files..."
@@ -55,3 +58,8 @@ update-dependents:
 	fi
 	@echo "Done updating dependents"
 
+sync-metadata:
+	@VERSION="$(VERSION)" perl -0pi -e 's{rev: v[0-9A-Za-z.\\-]+}{rev: $$ENV{VERSION}}g' README.md
+
+version:
+	@echo $(VERSION)

@@ -56,11 +56,9 @@ When adding new fields to the schema:
 
 ### Versioning
 
-- Follow semantic versioning (v0.1.0, v0.2.0, etc.)
-- Tag releases in git
-- Update version strings in:
-  - `cmd/lint/main.go`
-  - `cli/internal/cli/lint.go` (SARIF output)
+- Release version comes from the repository `VERSION` file in the monorepo, or the mirrored repo `VERSION` file after export.
+- Release tags must match `VERSION`.
+- Do not hand-edit version strings in code; sync metadata from `VERSION` before tagging.
 
 ## Testing
 

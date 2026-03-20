@@ -16,7 +16,7 @@ The RunsOn config schema defines the structure and validation rules for reposito
 ### Prerequisites
 
 - [mise](https://mise.jdx.dev/) (formerly rtx) - for managing tool versions
-- Go 1.23+ (installed via mise)
+- Go 1.26.1 (installed via mise)
 
 ### Setup
 
@@ -94,7 +94,7 @@ The `runs-on.yml` file supports:
 
 - `_extends`: Reference to another repository's config (string)
 - `runners`: Map of runner specifications
-- `images`: Map of image specifications  
+- `images`: Map of image specifications
 - `pools`: Map of pool specifications
 - `admins`: List of admin usernames (array of strings)
 
@@ -115,6 +115,8 @@ runners:
     volume: "80gb:gp3:125mbs:3000iops"  # Volume spec
     extras: ["s3-cache"]   # Extra features
     tags: ["Team:DevOps"]  # Tags
+    prerun: |              # Runs before each runner start / boot
+      echo prepare-runner
 ```
 
 ### Image Specification
@@ -130,7 +132,11 @@ images:
     preinstall: |
       apt-get update
       apt-get install -y docker
+    prerun: |
+      echo prepare-boot
 ```
+
+`preinstall` is intended for initial host setup. `prerun` is intended for commands that should run on each boot before the GitHub runner starts.
 
 ### Pool Specification
 
@@ -229,7 +235,7 @@ Add to `.pre-commit-config.yaml`:
 ```yaml
 repos:
   - repo: https://github.com/runs-on/config
-    rev: v0.1.0
+    rev: v2.12.1
     hooks:
       - id: lint
         args: [--format, json]

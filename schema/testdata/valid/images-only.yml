@@ -2,5 +2,5 @@
 images:
   test-image:
     ami: ami-1234567890abcdef0
-
-
+    prerun: |
+      echo prepare-boot

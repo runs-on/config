@@ -4,5 +4,5 @@ runners:
     cpu: [2]
     ram: [16]
     family: [c7a]
-
-
+    prerun: |
+      echo prepare-runner
