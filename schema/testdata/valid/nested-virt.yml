@@ -1,0 +1,13 @@
+runners:
+  nested-virt-enabled:
+    cpu: [2]
+    ram: [8]
+    family: [c7a]
+    image: ubuntu22-full-x64
+    nested-virt: true
+  nested-virt-disabled:
+    cpu: [2]
+    ram: [8]
+    family: [m7a]
+    image: ubuntu22-full-x64
+    nested-virt: false

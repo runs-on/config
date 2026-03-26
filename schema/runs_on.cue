@@ -61,6 +61,9 @@ package schema
 	// SSH access configuration (bool or string "true"/"false")
 	ssh?: #BoolOrString
 
+	// Nested virtualization configuration (bool or string "true"/"false")
+	"nested-virt"?: #BoolOrString
+
 	// Private network configuration (bool or string "true"/"false")
 	private?: #BoolOrString
 

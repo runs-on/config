@@ -16,6 +16,7 @@ func TestValidateFile_Valid(t *testing.T) {
 		"../../schema/testdata/valid/with-anchors.yml",
 		"../../schema/testdata/valid/pool-complete.yml",
 		"../../schema/testdata/valid/pool-runner-reference.yml",
+		"../../schema/testdata/valid/nested-virt.yml",
 		"../../schema/testdata/valid/github-private-runs-on.yml",
 	}
 
@@ -49,6 +50,7 @@ func TestValidateFile_Invalid(t *testing.T) {
 		"../../schema/testdata/invalid/pool-invalid-runner-reference.yml",
 		"../../schema/testdata/invalid/indentation-issue.yml",
 		"../../schema/testdata/invalid/indentation-nested.yml",
+		"../../schema/testdata/invalid/nested-virt.yml",
 	}
 
 	for _, testFile := range testFiles {

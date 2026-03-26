@@ -1,0 +1,7 @@
+runners:
+  nested-virt-invalid:
+    cpu: [2]
+    ram: [8]
+    family: [c7a]
+    image: ubuntu22-full-x64
+    nested-virt: maybe

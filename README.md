@@ -111,6 +111,7 @@ runners:
     image: ubuntu22-full-x64
     spot: "pco"           # Spot configuration
     ssh: false             # SSH access (bool or string)
+    nested-virt: true      # Nested virtualization (bool or string)
     private: true          # Private network (bool or string)
     volume: "80gb:gp3:125mbs:3000iops"  # Volume spec
     extras: ["s3-cache"]   # Extra features
@@ -137,6 +138,8 @@ images:
 ```
 
 `preinstall` is intended for initial host setup. `prerun` is intended for commands that should run on each boot before the GitHub runner starts.
+
+`nested-virt` enables nested virtualization on supported x64 instance families.
 
 ### Pool Specification
 
@@ -235,7 +238,7 @@ Add to `.pre-commit-config.yaml`:
 ```yaml
 repos:
   - repo: https://github.com/runs-on/config
-    rev: v2.12.1
+    rev: v2.12.2
     hooks:
       - id: lint
         args: [--format, json]
