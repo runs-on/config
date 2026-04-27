@@ -25,7 +25,6 @@ pools:
     env: production
     timezone: UTC
     runner: custom-runner
-    max_surge: 5
     schedule:
       - name: default
         hot: 2
@@ -40,5 +39,3 @@ pools:
 admins:
   - admin1
   - admin2
-
-
