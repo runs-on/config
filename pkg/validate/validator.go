@@ -57,7 +57,7 @@ func ValidateReader(ctx context.Context, r io.Reader, sourceName string) ([]Diag
 	}
 
 	// Parse YAML (this will expand anchors automatically)
-	var yamlData interface{}
+	var yamlData any
 	if err := yaml.Unmarshal(data, &yamlData); err != nil {
 		return []Diagnostic{
 			{
@@ -125,7 +125,7 @@ func ValidateReader(ctx context.Context, r io.Reader, sourceName string) ([]Diag
 	deprecationWarnings := checkDeprecatedFields(yamlData, sourceName, data)
 
 	// Check for invalid runner references in pools
-	runnerReferenceErrors := checkRunnerReferences(yamlData, sourceName, data)
+	runnerReferenceErrors := checkRunnerReferences(yamlData, sourceName)
 
 	// Combine all diagnostics
 	allDiagnostics := append(schemaErrors, deprecationWarnings...)
@@ -204,11 +204,11 @@ func convertCueErrors(err error, sourceName string) []Diagnostic {
 }
 
 // checkRunnerReferences checks that pool runners exist in the runners map
-func checkRunnerReferences(yamlData interface{}, sourceName string, originalYAML []byte) []Diagnostic {
+func checkRunnerReferences(yamlData any, sourceName string) []Diagnostic {
 	var errors []Diagnostic
 
 	// Type assert to map
-	data, ok := yamlData.(map[string]interface{})
+	data, ok := yamlData.(map[string]any)
 	if !ok {
 		return errors
 	}
@@ -219,7 +219,7 @@ func checkRunnerReferences(yamlData interface{}, sourceName string, originalYAML
 		return errors // No pools, nothing to validate
 	}
 
-	pools, ok := poolsRaw.(map[string]interface{})
+	pools, ok := poolsRaw.(map[string]any)
 	if !ok {
 		return errors
 	}
@@ -229,7 +229,7 @@ func checkRunnerReferences(yamlData interface{}, sourceName string, originalYAML
 	if !hasRunners {
 		// If there are pools but no runners map, that's an error
 		for poolName, poolValue := range pools {
-			if pool, ok := poolValue.(map[string]interface{}); ok {
+			if pool, ok := poolValue.(map[string]any); ok {
 				if runnerName, hasRunner := pool["runner"]; hasRunner {
 					errors = append(errors, Diagnostic{
 						Path:     sourceName,
@@ -244,14 +244,14 @@ func checkRunnerReferences(yamlData interface{}, sourceName string, originalYAML
 		return errors
 	}
 
-	runners, ok := runnersRaw.(map[string]interface{})
+	runners, ok := runnersRaw.(map[string]any)
 	if !ok {
 		return errors
 	}
 
 	// Check each pool's runner reference
 	for poolName, poolValue := range pools {
-		pool, ok := poolValue.(map[string]interface{})
+		pool, ok := poolValue.(map[string]any)
 		if !ok {
 			continue
 		}
@@ -282,7 +282,7 @@ func checkRunnerReferences(yamlData interface{}, sourceName string, originalYAML
 }
 
 // checkDeprecatedFields checks for deprecated fields and returns warnings
-func checkDeprecatedFields(yamlData interface{}, sourceName string, originalYAML []byte) []Diagnostic {
+func checkDeprecatedFields(yamlData any, sourceName string, originalYAML []byte) []Diagnostic {
 	var warnings []Diagnostic
 
 	// Parse YAML with line information to get accurate line numbers
@@ -323,7 +323,7 @@ func checkDeprecatedFields(yamlData interface{}, sourceName string, originalYAML
 										Path:     sourceName,
 										Line:     fieldKeyNode.Line,
 										Column:   fieldKeyNode.Column,
-										Message:  "field 'disk' is deprecated, use 'volume' instead (e.g., volume=80gb:gp3:125mbs:3000iops)",
+										Message:  "field 'disk' is deprecated and ignored; use 'volume' instead (e.g., volume=80gb:gp3:125mbs:3000iops)",
 										Severity: SeverityWarning,
 									})
 								}
@@ -367,11 +367,11 @@ func checkDeprecatedFields(yamlData interface{}, sourceName string, originalYAML
 }
 
 // checkDeprecatedFieldsRecursive is a fallback that checks without line numbers
-func checkDeprecatedFieldsRecursive(data interface{}, sourceName string, path string) []Diagnostic {
+func checkDeprecatedFieldsRecursive(data any, sourceName string, path string) []Diagnostic {
 	var warnings []Diagnostic
 
 	switch v := data.(type) {
-	case map[string]interface{}:
+	case map[string]any:
 		for key, value := range v {
 			currentPath := path
 			if currentPath != "" {
@@ -382,15 +382,15 @@ func checkDeprecatedFieldsRecursive(data interface{}, sourceName string, path st
 			switch key {
 			case "runners":
 				// Check runners map
-				if runnersMap, ok := value.(map[string]interface{}); ok {
+				if runnersMap, ok := value.(map[string]any); ok {
 					for runnerKey, runnerValue := range runnersMap {
-						if runnerSpec, ok := runnerValue.(map[string]interface{}); ok {
+						if runnerSpec, ok := runnerValue.(map[string]any); ok {
 							if _, hasDisk := runnerSpec["disk"]; hasDisk {
 								warnings = append(warnings, Diagnostic{
 									Path:     sourceName,
 									Line:     0,
 									Column:   0,
-									Message:  fmt.Sprintf("field 'runners.%s.disk' is deprecated, use 'volume' instead (e.g., volume=80gb:gp3:125mbs:3000iops)", runnerKey),
+									Message:  fmt.Sprintf("field 'runners.%s.disk' is deprecated and ignored; use 'volume' instead (e.g., volume=80gb:gp3:125mbs:3000iops)", runnerKey),
 									Severity: SeverityWarning,
 								})
 							}
@@ -399,9 +399,9 @@ func checkDeprecatedFieldsRecursive(data interface{}, sourceName string, path st
 				}
 			case "pools":
 				// Check pools map
-				if poolsMap, ok := value.(map[string]interface{}); ok {
+				if poolsMap, ok := value.(map[string]any); ok {
 					for poolKey, poolValue := range poolsMap {
-						if poolSpec, ok := poolValue.(map[string]interface{}); ok {
+						if poolSpec, ok := poolValue.(map[string]any); ok {
 							if _, hasEnvironment := poolSpec["environment"]; hasEnvironment {
 								warnings = append(warnings, Diagnostic{
 									Path:     sourceName,
@@ -419,7 +419,7 @@ func checkDeprecatedFieldsRecursive(data interface{}, sourceName string, path st
 				warnings = append(warnings, checkDeprecatedFieldsRecursive(value, sourceName, currentPath)...)
 			}
 		}
-	case map[interface{}]interface{}:
+	case map[any]any:
 		for key, value := range v {
 			keyStr, ok := key.(string)
 			if !ok {
@@ -433,19 +433,19 @@ func checkDeprecatedFieldsRecursive(data interface{}, sourceName string, path st
 
 			if keyStr == "runners" {
 				// Check runners map
-				if runnersMap, ok := value.(map[interface{}]interface{}); ok {
+				if runnersMap, ok := value.(map[any]any); ok {
 					for runnerKey, runnerValue := range runnersMap {
 						runnerKeyStr, ok := runnerKey.(string)
 						if !ok {
 							continue
 						}
-						if runnerSpec, ok := runnerValue.(map[interface{}]interface{}); ok {
+						if runnerSpec, ok := runnerValue.(map[any]any); ok {
 							if _, hasDisk := runnerSpec["disk"]; hasDisk {
 								warnings = append(warnings, Diagnostic{
 									Path:     sourceName,
 									Line:     0,
 									Column:   0,
-									Message:  fmt.Sprintf("field 'runners.%s.disk' is deprecated, use 'volume' instead (e.g., volume=80gb:gp3:125mbs:3000iops)", runnerKeyStr),
+									Message:  fmt.Sprintf("field 'runners.%s.disk' is deprecated and ignored; use 'volume' instead (e.g., volume=80gb:gp3:125mbs:3000iops)", runnerKeyStr),
 									Severity: SeverityWarning,
 								})
 							}
@@ -454,13 +454,13 @@ func checkDeprecatedFieldsRecursive(data interface{}, sourceName string, path st
 				}
 			} else if keyStr == "pools" {
 				// Check pools map
-				if poolsMap, ok := value.(map[interface{}]interface{}); ok {
+				if poolsMap, ok := value.(map[any]any); ok {
 					for poolKey, poolValue := range poolsMap {
 						poolKeyStr, ok := poolKey.(string)
 						if !ok {
 							continue
 						}
-						if poolSpec, ok := poolValue.(map[interface{}]interface{}); ok {
+						if poolSpec, ok := poolValue.(map[any]any); ok {
 							if _, hasEnvironment := poolSpec["environment"]; hasEnvironment {
 								warnings = append(warnings, Diagnostic{
 									Path:     sourceName,
@@ -478,7 +478,7 @@ func checkDeprecatedFieldsRecursive(data interface{}, sourceName string, path st
 				warnings = append(warnings, checkDeprecatedFieldsRecursive(value, sourceName, currentPath)...)
 			}
 		}
-	case []interface{}:
+	case []any:
 		for i, item := range v {
 			warnings = append(warnings, checkDeprecatedFieldsRecursive(item, sourceName, fmt.Sprintf("%s[%d]", path, i))...)
 		}
@@ -489,18 +489,18 @@ func checkDeprecatedFieldsRecursive(data interface{}, sourceName string, path st
 
 // normalizeSpotValues recursively normalizes boolean spot values to strings
 // This allows YAML files to use spot: false (boolean) which gets converted to spot: "false" (string)
-func normalizeSpotValues(data interface{}) interface{} {
+func normalizeSpotValues(data any) any {
 	switch v := data.(type) {
-	case map[string]interface{}:
-		result := make(map[string]interface{})
+	case map[string]any:
+		result := make(map[string]any)
 		for key, value := range v {
 			if key == "runners" {
 				// Handle runners map specially to normalize spot values
-				if runnersMap, ok := value.(map[string]interface{}); ok {
-					normalizedRunners := make(map[string]interface{})
+				if runnersMap, ok := value.(map[string]any); ok {
+					normalizedRunners := make(map[string]any)
 					for runnerKey, runnerValue := range runnersMap {
-						if runnerSpec, ok := runnerValue.(map[string]interface{}); ok {
-							normalizedSpec := make(map[string]interface{})
+						if runnerSpec, ok := runnerValue.(map[string]any); ok {
+							normalizedSpec := make(map[string]any)
 							for specKey, specValue := range runnerSpec {
 								if specKey == "spot" {
 									// Convert boolean to string
@@ -531,16 +531,16 @@ func normalizeSpotValues(data interface{}) interface{} {
 			}
 		}
 		return result
-	case map[interface{}]interface{}:
-		result := make(map[interface{}]interface{})
+	case map[any]any:
+		result := make(map[any]any)
 		for key, value := range v {
 			if keyStr, ok := key.(string); ok && keyStr == "runners" {
 				// Handle runners map specially to normalize spot values
-				if runnersMap, ok := value.(map[interface{}]interface{}); ok {
-					normalizedRunners := make(map[interface{}]interface{})
+				if runnersMap, ok := value.(map[any]any); ok {
+					normalizedRunners := make(map[any]any)
 					for runnerKey, runnerValue := range runnersMap {
-						if runnerSpec, ok := runnerValue.(map[interface{}]interface{}); ok {
-							normalizedSpec := make(map[interface{}]interface{})
+						if runnerSpec, ok := runnerValue.(map[any]any); ok {
+							normalizedSpec := make(map[any]any)
 							for specKey, specValue := range runnerSpec {
 								if specKeyStr, ok := specKey.(string); ok && specKeyStr == "spot" {
 									// Convert boolean to string
@@ -571,8 +571,8 @@ func normalizeSpotValues(data interface{}) interface{} {
 			}
 		}
 		return result
-	case []interface{}:
-		result := make([]interface{}, len(v))
+	case []any:
+		result := make([]any, len(v))
 		for i, item := range v {
 			result[i] = normalizeSpotValues(item)
 		}
