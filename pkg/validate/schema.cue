@@ -45,7 +45,7 @@ package schema
 	// RAM in GB - can be single int, string (e.g., "16+32"), or array
 	ram?: #IntArray
 
-	// Disk size (DEPRECATED and ignored: use volume instead)
+	// Disk size (DEPRECATED: use volume instead)
 	disk?: string
 
 	// Volume specification: format: size:type:throughput:iops
@@ -148,6 +148,9 @@ package schema
 
 	// Runner reference (required)
 	runner: string & != ""
+
+	// Maximum surge instances
+	max_surge?: int & >=0
 }
 
 // Helper to validate runner exists in runners map

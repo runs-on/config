@@ -5,7 +5,7 @@
 ### Initial Setup
 
 ```bash
-# Install dependencies
+# Install dependencies (Go, CUE CLI, golangci-lint)
 make setup
 
 # Or manually:
@@ -103,7 +103,7 @@ The GitHub Actions workflow (`.github/workflows/ci.yml`) runs:
 
 1. Go tests
 2. Schema generation check (ensures `schema.json` is up to date)
-3. Linting with the monorepo root config via `make lint`
+3. Linting with golangci-lint
 
 ## Integration with RunsOn CLI
 
@@ -143,3 +143,5 @@ YAML anchors are handled automatically by the YAML parser. If you see issues:
 1. Verify anchor syntax is correct
 2. Check that aliases reference existing anchors
 3. Ensure anchors are defined before use
+
+

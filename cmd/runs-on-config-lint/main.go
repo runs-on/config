@@ -129,7 +129,7 @@ func outputSARIF(diags []validate.Diagnostic) {
 		Region struct {
 			StartLine   int `json:"startLine,omitempty"`
 			StartColumn int `json:"startColumn,omitempty"`
-		} `json:"region"`
+		} `json:"region,omitempty"`
 	}
 
 	type sarifResult struct {
