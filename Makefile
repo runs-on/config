@@ -1,3 +1,4 @@
+MONOREPO_ROOT := ..
 VERSION ?= $(shell if [ -f ../VERSION ]; then tr -d '\n' < ../VERSION; elif [ -f VERSION ]; then tr -d '\n' < VERSION; elif git describe --tags --exact-match >/dev/null 2>&1; then git describe --tags --exact-match; else echo dev; fi)
 LDFLAGS = -X github.com/runs-on/config/internal/version.Version=$(VERSION)
 
@@ -25,8 +26,7 @@ sync-schema:
 	cp schema/runs_on.cue pkg/validate/schema.cue
 
 lint:
-	@echo "Running golangci-lint..."
-	mise exec -- golangci-lint run
+	@$(MAKE) -C $(MONOREPO_ROOT) lint-config-module
 
 test:
 	@echo "Running tests..."

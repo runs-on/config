@@ -150,7 +150,6 @@ pools:
     env: production
     timezone: UTC
     runner: small-x64
-    max_surge: 5
     schedule:
       - name: default
         hot: 2
@@ -238,7 +237,7 @@ Add to `.pre-commit-config.yaml`:
 ```yaml
 repos:
   - repo: https://github.com/runs-on/config
-    rev: v2.12.7
+    rev: v3.0.8
     hooks:
       - id: lint
         args: [--format, json]
