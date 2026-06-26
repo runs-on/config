@@ -237,7 +237,7 @@ Add to `.pre-commit-config.yaml`:
 ```yaml
 repos:
   - repo: https://github.com/runs-on/config
-    rev: v3.1.2
+    rev: v3.1.3
     hooks:
       - id: lint
         args: [--format, json]
