@@ -363,6 +363,7 @@ func TestValidateReader_RunnerAllFields(t *testing.T) {
     # Image and volume
     image: ubuntu22-full-x64
     volume: "80gb:gp3:125mbs:3000iops"
+    sticky: "go-cache:20gb:gp3:750mbs:6000iops"
 
     # Deprecated disk field (should still validate but show ignored warning)
     disk: large
