@@ -114,6 +114,7 @@ runners:
     nested-virt: true      # Nested virtualization (bool or string)
     private: true          # Private network (bool or string)
     volume: "80gb:gp3:125mbs:3000iops"  # Volume spec
+    sticky: "go-cache:20gb:gp3:750mbs:6000iops"  # Sticky disk spec
     extras: ["s3-cache"]   # Extra features
     tags: ["Team:DevOps"]  # Tags
     prerun: |              # Runs before each runner start / boot
@@ -237,7 +238,7 @@ Add to `.pre-commit-config.yaml`:
 ```yaml
 repos:
   - repo: https://github.com/runs-on/config
-    rev: v3.1.3
+    rev: v3.2.0
     hooks:
       - id: lint
         args: [--format, json]
