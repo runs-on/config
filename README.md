@@ -113,12 +113,34 @@ runners:
     ssh: false             # SSH access (bool or string)
     nested-virt: true      # Nested virtualization (bool or string)
     private: true          # Private network (bool or string)
-    volume: "80gb:gp3:125mbs:3000iops"  # Volume spec
+    volume: "80gb:gp3:125mibps:3000iops"  # Volume spec
+    sticky: "go-cache:60gb:gp3:750mibps:6000iops"  # Sticky disk spec; restores default to 200 MiB/s initialization
     extras: ["s3-cache"]   # Extra features
     tags: ["Team:DevOps"]  # Tags
     prerun: |              # Runs before each runner start / boot
       echo prepare-runner
 ```
+
+The `image` field accepts built-in RunsOn image IDs. Ubuntu 26 is available on
+both supported Linux architectures:
+
+| Image ID | Architecture | Base OS |
+|---|---|---|
+| `ubuntu26-full-x64` | x64 | Ubuntu 26.04 |
+| `ubuntu26-full-arm64` | arm64 | Ubuntu 26.04 |
+
+Select the image in a repository runner definition:
+
+```yaml
+runners:
+  ubuntu26-arm:
+    cpu: 2
+    family: [c7g]
+    image: ubuntu26-full-arm64
+```
+
+For Flex jobs, the same IDs can be selected directly in the `runs-on` label,
+for example `image=ubuntu26-full-x64`.
 
 ### Image Specification
 
@@ -237,7 +259,7 @@ Add to `.pre-commit-config.yaml`:
 ```yaml
 repos:
   - repo: https://github.com/runs-on/config
-    rev: v3.1.3
+    rev: v3.2.0
     hooks:
       - id: lint
         args: [--format, json]
