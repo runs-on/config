@@ -21,17 +21,17 @@ runners:
     image: ubuntu22-full-x64
     ram: 1
     family: [t3]
-    volume: gp3:40gb:125mbps:3000iops
+    volume: gp3:40gb:125mibps:3000iops
   m7a:
     image: ubuntu24-full-x64
     ram: 8
     family: [m7a]
-    volume: gp3:40gb:125mbps:3000iops
+    volume: gp3:40gb:125mibps:3000iops
   i7ie:
     image: ubuntu24-full-x64
     cpu: 2
     family: [i7ie]
-    volume: gp3:30gb:125mbps:3000iops
+    volume: gp3:30gb:125mibps:3000iops
 
 pools:
   m7a-stage:
@@ -74,4 +74,3 @@ pools:
           time: ["10:00", "16:00"]
         stopped: 2
         hot: 1
-
