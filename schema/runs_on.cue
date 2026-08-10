@@ -49,15 +49,11 @@ package schema
 	disk?: string
 
 	// Volume specification: format: size:type:throughput:iops
-	// e.g., "80gb:gp3:125mibps:3000iops"
+	// e.g., "80gb:gp3:125mbs:3000iops"
 	volume?: string
 
-	// Sticky disk specification: optional lineage name, size, and volume settings
-	// e.g., "20gb" or "go-cache:20gb:gp3:750mibps:6000iops:lazy-init"
-	sticky?: string
-
 	// Retry configuration - can be string (e.g., "always+on-failure") or array
-	retry?: #StringArray | bool
+	retry?: #StringArray
 
 	// Extra features (e.g., "s3-cache", "efs") - can be string (e.g., "s3-cache+tmpfs") or array
 	extras?: #StringArray

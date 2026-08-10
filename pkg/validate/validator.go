@@ -323,7 +323,7 @@ func checkDeprecatedFields(yamlData any, sourceName string, originalYAML []byte)
 										Path:     sourceName,
 										Line:     fieldKeyNode.Line,
 										Column:   fieldKeyNode.Column,
-										Message:  "field 'disk' is deprecated and ignored; use 'volume' instead (e.g., volume=80gb:gp3:125mibps:3000iops)",
+										Message:  "field 'disk' is deprecated and ignored; use 'volume' instead (e.g., volume=80gb:gp3:125mbs:3000iops)",
 										Severity: SeverityWarning,
 									})
 								}
@@ -390,7 +390,7 @@ func checkDeprecatedFieldsRecursive(data any, sourceName string, path string) []
 									Path:     sourceName,
 									Line:     0,
 									Column:   0,
-									Message:  fmt.Sprintf("field 'runners.%s.disk' is deprecated and ignored; use 'volume' instead (e.g., volume=80gb:gp3:125mibps:3000iops)", runnerKey),
+									Message:  fmt.Sprintf("field 'runners.%s.disk' is deprecated and ignored; use 'volume' instead (e.g., volume=80gb:gp3:125mbs:3000iops)", runnerKey),
 									Severity: SeverityWarning,
 								})
 							}
@@ -445,7 +445,7 @@ func checkDeprecatedFieldsRecursive(data any, sourceName string, path string) []
 									Path:     sourceName,
 									Line:     0,
 									Column:   0,
-									Message:  fmt.Sprintf("field 'runners.%s.disk' is deprecated and ignored; use 'volume' instead (e.g., volume=80gb:gp3:125mibps:3000iops)", runnerKeyStr),
+									Message:  fmt.Sprintf("field 'runners.%s.disk' is deprecated and ignored; use 'volume' instead (e.g., volume=80gb:gp3:125mbs:3000iops)", runnerKeyStr),
 									Severity: SeverityWarning,
 								})
 							}
