@@ -432,8 +432,6 @@ func TestValidateReader_ImageAllFields(t *testing.T) {
       echo prepare-boot
       systemctl restart docker
     ami: ami-1234567890abcdef0
-    main_disk_size: 120
-    root_device_name: /dev/sda1
     tags:
       Team: DevOps
       Environment: Production
@@ -451,6 +449,21 @@ func TestValidateReader_ImageAllFields(t *testing.T) {
 		for _, diag := range errors {
 			t.Errorf("  %s:%d:%d: %s", diag.Path, diag.Line, diag.Column, diag.Message)
 		}
+	}
+}
+
+func TestValidateReader_ImageRejectsResolvedFields(t *testing.T) {
+	for _, field := range []string{"main_disk_size: 120", "root_device_name: /dev/sda1"} {
+		t.Run(strings.SplitN(field, ":", 2)[0], func(t *testing.T) {
+			yamlContent := "images:\n  custom:\n    ami: ami-1234567890abcdef0\n    " + field + "\n"
+			diags, err := validate.ValidateReader(context.Background(), strings.NewReader(yamlContent), "test.yml")
+			if err != nil {
+				t.Fatalf("ValidateReader failed: %v", err)
+			}
+			if errors := filterErrors(diags); len(errors) == 0 {
+				t.Fatalf("expected %s to be rejected as resolved image metadata", field)
+			}
+		})
 	}
 }
 
