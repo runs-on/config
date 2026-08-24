@@ -121,12 +121,6 @@ package schema
 	// AMI ID
 	ami?: string
 
-	// Main disk size in GB
-	main_disk_size?: int & >=0
-
-	// Root device name
-	root_device_name?: string
-
 	// Tags for the image
 	tags?: {
 		[string]: string
