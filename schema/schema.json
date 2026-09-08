@@ -236,7 +236,7 @@
                     ]
                 },
                 "spot": {
-                    "description": "Spot instance configuration\nValues: \"false\", \"never\", \"true\", \"pco\", \"price-capacity-optimized\",\n        \"lp\", \"lowest-price\", \"co\", \"capacity-optimized\"",
+                    "description": "Spot instance configuration\nValues: \"false\", \"never\", \"true\", \"pco\", \"price-capacity-optimized\",\n        \"lp\", \"lowest-price\", \"co\", \"capacity-optimized\",\n        \"cop\", \"capacity-optimized-prioritized\"\nPrioritized Spot requires exact instance types in family, in preference order.",
                     "$ref": "#/$defs/SpotValue"
                 },
                 "ssh": {
@@ -289,7 +289,9 @@
                 "lp",
                 "lowest-price",
                 "co",
-                "capacity-optimized"
+                "capacity-optimized",
+                "cop",
+                "capacity-optimized-prioritized"
             ]
         },
         "StringArray": {
