@@ -1,0 +1,4 @@
+runners:
+  unsupported-strategy:
+    family: [c8a.large, c8i.large]
+    spot: prioritized

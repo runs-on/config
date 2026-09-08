@@ -73,7 +73,9 @@ package schema
 
 	// Spot instance configuration
 	// Values: "false", "never", "true", "pco", "price-capacity-optimized",
-	//         "lp", "lowest-price", "co", "capacity-optimized"
+	//         "lp", "lowest-price", "co", "capacity-optimized",
+	//         "cop", "capacity-optimized-prioritized"
+	// Prioritized Spot requires exact instance types in family, in preference order.
 	spot?: #SpotValue
 
 	// Instance family - can be string (e.g., "c7a+m7a") or array (e.g., ["c7a", "m7a"])
@@ -195,7 +197,7 @@ package schema
 
 // SpotValue defines valid spot instance configuration values
 // Note: Boolean values (false/true) are automatically normalized to strings ("false"/"true") during validation
-#SpotValue: "false" | "never" | "true" | "pco" | "price-capacity-optimized" | "lp" | "lowest-price" | "co" | "capacity-optimized"
+#SpotValue: "false" | "never" | "true" | "pco" | "price-capacity-optimized" | "lp" | "lowest-price" | "co" | "capacity-optimized" | "cop" | "capacity-optimized-prioritized"
 
 // Main schema entry point
 #Config: #RepoConfig
