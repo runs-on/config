@@ -128,6 +128,16 @@ both supported Linux architectures:
 |---|---|---|
 | `ubuntu26-full-x64` | x64 | Ubuntu 26.04 |
 | `ubuntu26-full-arm64` | arm64 | Ubuntu 26.04 |
+| `ubuntu26-gpu-x64` | x64 | Ubuntu 26.04 with NVIDIA GPU tooling |
+| `ubuntu26-stepsecurity-x64` | x64 | Ubuntu 26.04 with StepSecurity |
+| `ubuntu26-stepsecurity-arm64` | arm64 | Ubuntu 26.04 with StepSecurity |
+
+Ubuntu 24 GPU images are also available with StepSecurity preinstalled:
+
+| Image ID | Architecture | Base OS |
+|---|---|---|
+| `ubuntu24-gpu-stepsecurity-x64` | x64 | Ubuntu 24.04 with NVIDIA GPU tooling and StepSecurity |
+| `ubuntu24-gpu-stepsecurity-arm64` | arm64 | Ubuntu 24.04 with NVIDIA GPU tooling and StepSecurity |
 
 Select the image in a repository runner definition:
 
@@ -141,6 +151,39 @@ runners:
 
 For Flex jobs, the same IDs can be selected directly in the `runs-on` label,
 for example `image=ubuntu26-full-x64`.
+
+### Spot instance preferences
+
+Set `spot: capacity-optimized-prioritized` (or `spot: cop`) to prefer exact
+instance types in `family` order:
+
+```yaml
+runners:
+  amd-preferred:
+    family: [c8a.large, c8i.large]
+    image: ubuntu24-full-x64
+    spot: capacity-optimized-prioritized
+```
+
+For Flex, the equivalent job label is:
+
+```yaml
+runs-on: runs-on=${{ github.run_id }}/family=c8a.large+c8i.large/image=ubuntu24-full-x64/spot=cop
+```
+
+Every entry must be an exact instance type. Family names such as `c8a`, wildcards,
+mixed lists, and unrecognized types cause a launch validation error. Validation
+uses the resolved runner spec, including job-label overrides. Exact types retain
+the existing image compatibility checks and ignore CPU/RAM ranges.
+
+AWS honors these preferences on a best-effort basis and optimizes for capacity
+first. It may select `c8i.large` even when `c8a.large` has available capacity.
+This is not a strict fallback chain. See the
+[AWS allocation strategy documentation](https://docs.aws.amazon.com/AWSEC2/latest/UserGuide/ec2-fleet-allocation-strategy.html).
+
+The default remains `price-capacity-optimized`. Other Spot strategies do not use
+list order. On-demand launches use exact types in order, including when RunsOn
+falls back after a Spot capacity shortage.
 
 ### Image Specification
 
@@ -259,7 +302,7 @@ Add to `.pre-commit-config.yaml`:
 ```yaml
 repos:
   - repo: https://github.com/runs-on/config
-    rev: v3.2.3
+    rev: v3.3.0
     hooks:
       - id: lint
         args: [--format, json]

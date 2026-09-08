@@ -1,0 +1,9 @@
+runners:
+  amd-preferred:
+    family: [c8a.large, c8i.large]
+    image: ubuntu24-full-x64
+    spot: capacity-optimized-prioritized
+  amd-preferred-short:
+    family: c8a.large+c8i.large
+    image: ubuntu24-full-x64
+    spot: cop

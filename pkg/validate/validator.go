@@ -40,10 +40,7 @@ func ValidateFile(ctx context.Context, filePath string) ([]Diagnostic, error) {
 	if err != nil {
 		return nil, fmt.Errorf("failed to open file: %w", err)
 	}
-	defer func() {
-		//nolint:errcheck // Close errors on read-only files are safe to ignore
-		_ = file.Close()
-	}()
+	defer file.Close()
 
 	return ValidateReader(ctx, file, filePath)
 }
