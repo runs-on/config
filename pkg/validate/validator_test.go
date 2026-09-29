@@ -318,38 +318,6 @@ admins:
 	}
 }
 
-func TestValidateReader_RunnerWithDebug(t *testing.T) {
-	yamlContent := `runners:
-  test-runner:
-    cpu: [2]
-    ram: [16]
-    family: [c7a]
-    debug: true
-
-pools:
-  test-pool:
-    runner: test-runner
-    schedule:
-      - name: default
-        hot: 1
-        stopped: 2
-`
-
-	reader := strings.NewReader(yamlContent)
-	diags, err := validate.ValidateReader(context.Background(), reader, "test.yml")
-	if err != nil {
-		t.Fatalf("ValidateReader failed: %v", err)
-	}
-
-	errors := filterErrors(diags)
-	if len(errors) > 0 {
-		t.Errorf("Expected no errors for runner with debug: true, got %d:", len(errors))
-		for _, diag := range errors {
-			t.Errorf("  %s:%d:%d: %s", diag.Path, diag.Line, diag.Column, diag.Message)
-		}
-	}
-}
-
 func TestValidateReader_RunnerAllFields(t *testing.T) {
 	// Test all possible runner fields as documented in https://runs-on.com/configuration/job-labels/
 	yamlContent := `runners:
@@ -451,469 +419,138 @@ func TestValidateReader_ImageAllFields(t *testing.T) {
 	}
 }
 
-func TestValidateReader_ImageRejectsResolvedFields(t *testing.T) {
-	for _, field := range []string{"main_disk_size: 120", "root_device_name: /dev/sda1"} {
-		t.Run(strings.SplitN(field, ":", 2)[0], func(t *testing.T) {
-			yamlContent := "images:\n  custom:\n    ami: ami-1234567890abcdef0\n    " + field + "\n"
-			diags, err := validate.ValidateReader(context.Background(), strings.NewReader(yamlContent), "test.yml")
-			if err != nil {
-				t.Fatalf("ValidateReader failed: %v", err)
-			}
-			if errors := filterErrors(diags); len(errors) == 0 {
-				t.Fatalf("expected %s to be rejected as resolved image metadata", field)
-			}
-		})
-	}
+// runnerYAML is the base document for per-field runner cases; imageYAML is the
+// same for images. withFields nests field lines under the spec.
+const (
+	runnerYAML = "runners:\n  test:\n"
+	imageYAML  = "images:\n  test:\n    ami: ami-1234567890abcdef0\n"
+)
+
+func withFields(base, fields string) string {
+	return base + "    " + strings.ReplaceAll(fields, "\n", "\n    ") + "\n"
 }
 
 func TestValidateReader_RunnerFieldsIndividually(t *testing.T) {
+	// cpu/ram have no numeric bounds and string fields have no format
+	// constraints, so there are no out-of-range or bad-format rows for them.
 	testCases := []struct {
-		name        string
-		yamlContent string
+		name    string
+		fields  string
+		wantErr string // substring of an expected error; empty means valid
 	}{
-		{
-			name: "family",
-			yamlContent: `runners:
-  test-runner:
-    cpu: [2]
-    ram: [16]
-    family: c7a`,
-		},
-		{
-			name: "family-multiple",
-			yamlContent: `runners:
-  test-runner:
-    cpu: [2]
-    ram: [16]
-    family: ["c7a", "m7a"]`,
-		},
-		{
-			name: "family-plus-separated",
-			yamlContent: `runners:
-  test-runner:
-    cpu: [2]
-    ram: [16]
-    family: "c7a+m7a"`,
-		},
-		{
-			name: "cpu",
-			yamlContent: `runners:
-  test-runner:
-    cpu: 4
-    ram: [16]
-    family: [c7a]`,
-		},
-		{
-			name: "cpu-array",
-			yamlContent: `runners:
-  test-runner:
-    cpu: [2, 4, 8]
-    ram: [16]
-    family: [c7a]`,
-		},
-		{
-			name: "cpu-plus-separated",
-			yamlContent: `runners:
-  test-runner:
-    cpu: "2+4"
-    ram: [16]
-    family: [c7a]`,
-		},
-		{
-			name: "ram",
-			yamlContent: `runners:
-  test-runner:
-    cpu: [2]
-    ram: 16
-    family: [c7a]`,
-		},
-		{
-			name: "ram-array",
-			yamlContent: `runners:
-  test-runner:
-    cpu: [2]
-    ram: [16, 32]
-    family: [c7a]`,
-		},
-		{
-			name: "ram-plus-separated",
-			yamlContent: `runners:
-  test-runner:
-    cpu: [2]
-    ram: "16+32"
-    family: [c7a]`,
-		},
-		{
-			name: "image",
-			yamlContent: `runners:
-  test-runner:
-    cpu: [2]
-    ram: [16]
-    family: [c7a]
-    image: ubuntu22-full-x64`,
-		},
-		{
-			name: "volume",
-			yamlContent: `runners:
-  test-runner:
-    cpu: [2]
-    ram: [16]
-    family: [c7a]
-    volume: "80gb:gp3:125mibps:3000iops"`,
-		},
-		{
-			name: "retry",
-			yamlContent: `runners:
-  test-runner:
-    cpu: [2]
-    ram: [16]
-    family: [c7a]
-    retry: "always"`,
-		},
-		{
-			name: "retry-array",
-			yamlContent: `runners:
-  test-runner:
-    cpu: [2]
-    ram: [16]
-    family: [c7a]
-    retry: ["always", "on-failure"]`,
-		},
-		{
-			name: "retry-plus-separated",
-			yamlContent: `runners:
-  test-runner:
-    cpu: [2]
-    ram: [16]
-    family: [c7a]
-    retry: "always+on-failure"`,
-		},
-		{
-			name: "spot-false",
-			yamlContent: `runners:
-  test-runner:
-    cpu: [2]
-    ram: [16]
-    family: [c7a]
-    spot: false`,
-		},
-		{
-			name: "spot-true",
-			yamlContent: `runners:
-  test-runner:
-    cpu: [2]
-    ram: [16]
-    family: [c7a]
-    spot: true`,
-		},
-		{
-			name: "spot-pco",
-			yamlContent: `runners:
-  test-runner:
-    cpu: [2]
-    ram: [16]
-    family: [c7a]
-    spot: "pco"`,
-		},
-		{
-			name: "spot-price-capacity-optimized",
-			yamlContent: `runners:
-  test-runner:
-    cpu: [2]
-    ram: [16]
-    family: [c7a]
-    spot: "price-capacity-optimized"`,
-		},
-		{
-			name: "spot-lowest-price",
-			yamlContent: `runners:
-  test-runner:
-    cpu: [2]
-    ram: [16]
-    family: [c7a]
-    spot: "lowest-price"`,
-		},
-		{
-			name: "spot-lp",
-			yamlContent: `runners:
-  test-runner:
-    cpu: [2]
-    ram: [16]
-    family: [c7a]
-    spot: "lp"`,
-		},
-		{
-			name: "spot-capacity-optimized",
-			yamlContent: `runners:
-  test-runner:
-    cpu: [2]
-    ram: [16]
-    family: [c7a]
-    spot: "capacity-optimized"`,
-		},
-		{
-			name: "spot-co",
-			yamlContent: `runners:
-  test-runner:
-    cpu: [2]
-    ram: [16]
-    family: [c7a]
-    spot: "co"`,
-		},
-		{
-			name: "spot-never",
-			yamlContent: `runners:
-  test-runner:
-    cpu: [2]
-    ram: [16]
-    family: [c7a]
-    spot: "never"`,
-		},
-		{
-			name: "ssh-true",
-			yamlContent: `runners:
-  test-runner:
-    cpu: [2]
-    ram: [16]
-    family: [c7a]
-    ssh: true`,
-		},
-		{
-			name: "ssh-false",
-			yamlContent: `runners:
-  test-runner:
-    cpu: [2]
-    ram: [16]
-    family: [c7a]
-    ssh: false`,
-		},
-		{
-			name: "ssh-string-true",
-			yamlContent: `runners:
-  test-runner:
-    cpu: [2]
-    ram: [16]
-    family: [c7a]
-    ssh: "true"`,
-		},
-		{
-			name: "ssh-string-false",
-			yamlContent: `runners:
-  test-runner:
-    cpu: [2]
-    ram: [16]
-    family: [c7a]
-    ssh: "false"`,
-		},
-		{
-			name: "private-true",
-			yamlContent: `runners:
-  test-runner:
-    cpu: [2]
-    ram: [16]
-    family: [c7a]
-    private: true`,
-		},
-		{
-			name: "private-false",
-			yamlContent: `runners:
-  test-runner:
-    cpu: [2]
-    ram: [16]
-    family: [c7a]
-    private: false`,
-		},
-		{
-			name: "private-string-true",
-			yamlContent: `runners:
-  test-runner:
-    cpu: [2]
-    ram: [16]
-    family: [c7a]
-    private: "true"`,
-		},
-		{
-			name: "private-string-false",
-			yamlContent: `runners:
-  test-runner:
-    cpu: [2]
-    ram: [16]
-    family: [c7a]
-    private: "false"`,
-		},
-		{
-			name: "extras-single",
-			yamlContent: `runners:
-  test-runner:
-    cpu: [2]
-    ram: [16]
-    family: [c7a]
-    extras: "s3-cache"`,
-		},
-		{
-			name: "extras-array",
-			yamlContent: `runners:
-  test-runner:
-    cpu: [2]
-    ram: [16]
-    family: [c7a]
-    extras: ["s3-cache", "ecr-cache"]`,
-		},
-		{
-			name: "extras-plus-separated",
-			yamlContent: `runners:
-  test-runner:
-    cpu: [2]
-    ram: [16]
-    family: [c7a]
-    extras: "s3-cache+ecr-cache+efs+tmpfs"`,
-		},
-		{
-			name: "debug-true",
-			yamlContent: `runners:
-  test-runner:
-    cpu: [2]
-    ram: [16]
-    family: [c7a]
-    debug: true`,
-		},
-		{
-			name: "debug-false",
-			yamlContent: `runners:
-  test-runner:
-    cpu: [2]
-    ram: [16]
-    family: [c7a]
-    debug: false`,
-		},
-		{
-			name: "debug-string-true",
-			yamlContent: `runners:
-  test-runner:
-    cpu: [2]
-    ram: [16]
-    family: [c7a]
-    debug: "true"`,
-		},
-		{
-			name: "debug-string-false",
-			yamlContent: `runners:
-  test-runner:
-    cpu: [2]
-    ram: [16]
-    family: [c7a]
-    debug: "false"`,
-		},
-		{
-			name: "preinstall",
-			yamlContent: `runners:
-  test-runner:
-    cpu: [2]
-    ram: [16]
-    family: [c7a]
-    preinstall: |
-      apt-get update
-      apt-get install -y docker`,
-		},
-		{
-			name: "prerun",
-			yamlContent: `runners:
-  test-runner:
-    cpu: [2]
-    ram: [16]
-    family: [c7a]
-    prerun: |
-      echo prepare-runner
-      systemctl restart docker`,
-		},
-		{
-			name: "tags",
-			yamlContent: `runners:
-  test-runner:
-    cpu: [2]
-    ram: [16]
-    family: [c7a]
-    tags: ["Team:DevOps", "Environment:Production"]`,
-		},
-		{
-			name: "tags-single",
-			yamlContent: `runners:
-  test-runner:
-    cpu: [2]
-    ram: [16]
-    family: [c7a]
-    tags: ["Team:DevOps"]`,
-		},
-		{
-			name: "id",
-			yamlContent: `runners:
-  test-runner:
-    cpu: [2]
-    ram: [16]
-    family: [c7a]
-    id: custom-runner-id`,
-		},
+		{"family", "family: c7a", ""},
+		{"family-multiple", `family: ["c7a", "m7a"]`, ""},
+		{"family-plus-separated", `family: "c7a+m7a"`, ""},
+		{"family-int", "family: 7", "runners.test.family"},
+		{"family-int-list", "family: [7]", "runners.test.family"},
+
+		{"cpu", "cpu: 4", ""},
+		{"cpu-array", "cpu: [2, 4, 8]", ""},
+		{"cpu-plus-separated", `cpu: "2+4"`, ""},
+		{"cpu-bool", "cpu: true", "runners.test.cpu"},
+		{"cpu-bool-list", "cpu: [true]", "runners.test.cpu"},
+
+		{"ram", "ram: 16", ""},
+		{"ram-array", "ram: [16, 32]", ""},
+		{"ram-plus-separated", `ram: "16+32"`, ""},
+		{"ram-bool", "ram: true", "runners.test.ram"},
+		{"ram-map", "ram: {gb: 16}", "runners.test.ram"},
+
+		{"image", "image: ubuntu22-full-x64", ""},
+		{"image-list", "image: [ubuntu22-full-x64]", "runners.test.image"},
+
+		{"volume", `volume: "80gb:gp3:125mibps:3000iops"`, ""},
+		{"volume-int", "volume: 80", "runners.test.volume"},
+
+		{"retry", `retry: "always"`, ""},
+		{"retry-array", `retry: ["always", "on-failure"]`, ""},
+		{"retry-plus-separated", `retry: "always+on-failure"`, ""},
+		{"retry-bool", "retry: false", ""},
+		{"retry-int", "retry: 3", "runners.test.retry"},
+		{"retry-int-list", "retry: [3]", "runners.test.retry"},
+
+		{"spot-false", "spot: false", ""},
+		{"spot-true", "spot: true", ""},
+		{"spot-pco", `spot: "pco"`, ""},
+		{"spot-price-capacity-optimized", `spot: "price-capacity-optimized"`, ""},
+		{"spot-lowest-price", `spot: "lowest-price"`, ""},
+		{"spot-lp", `spot: "lp"`, ""},
+		{"spot-capacity-optimized", `spot: "capacity-optimized"`, ""},
+		{"spot-co", `spot: "co"`, ""},
+		{"spot-cop", `spot: "cop"`, ""},
+		{"spot-capacity-optimized-prioritized", `spot: "capacity-optimized-prioritized"`, ""},
+		{"spot-never", `spot: "never"`, ""},
+		{"spot-unknown", `spot: "sometimes"`, "runners.test.spot"},
+		{"spot-int", "spot: 1", "runners.test.spot"},
+		{"spot-list", `spot: ["pco"]`, "runners.test.spot"},
+
+		{"ssh-true", "ssh: true", ""},
+		{"ssh-false", "ssh: false", ""},
+		{"ssh-string-true", `ssh: "true"`, ""},
+		{"ssh-string-false", `ssh: "false"`, ""},
+		{"ssh-string-yes", `ssh: "yes"`, "runners.test.ssh"},
+		{"ssh-int", "ssh: 1", "runners.test.ssh"},
+
+		{"private-true", "private: true", ""},
+		{"private-false", "private: false", ""},
+		{"private-string-true", `private: "true"`, ""},
+		{"private-string-false", `private: "false"`, ""},
+		{"private-string-no", `private: "no"`, "runners.test.private"},
+		{"private-int", "private: 0", "runners.test.private"},
+
+		{"extras-single", `extras: "s3-cache"`, ""},
+		{"extras-array", `extras: ["s3-cache", "ecr-cache"]`, ""},
+		{"extras-plus-separated", `extras: "s3-cache+ecr-cache+efs+tmpfs"`, ""},
+		{"extras-int", "extras: 1", "runners.test.extras"},
+		{"extras-int-list", "extras: [1]", "runners.test.extras"},
+
+		{"debug-true", "debug: true", ""},
+		{"debug-false", "debug: false", ""},
+		{"debug-string-true", `debug: "true"`, ""},
+		{"debug-string-false", `debug: "false"`, ""},
+		{"debug-string-on", `debug: "on"`, "runners.test.debug"},
+		{"debug-int", "debug: 1", "runners.test.debug"},
+
+		{"preinstall", "preinstall: |\n  apt-get update\n  apt-get install -y docker", ""},
+		{"preinstall-list", "preinstall: [apt-get update]", "runners.test.preinstall"},
+
+		{"prerun", "prerun: |\n  echo prepare-runner\n  systemctl restart docker", ""},
+		{"prerun-list", "prerun: [echo prepare-runner]", "runners.test.prerun"},
+
+		{"tags", `tags: ["Team:DevOps", "Environment:Production"]`, ""},
+		{"tags-single", `tags: ["Team:DevOps"]`, ""},
+		{"tags-map", "tags: {Team: DevOps}", "runners.test.tags"},
+		{"tags-int-list", "tags: [1]", "runners.test.tags"},
+
+		{"id", "id: custom-runner-id", ""},
+		{"id-int", "id: 123", "runners.test.id"},
+
+		{"unknown-field", "bogus: value", "runners.test.bogus"},
 	}
 
 	for _, tc := range testCases {
 		t.Run(tc.name, func(t *testing.T) {
-			reader := strings.NewReader(tc.yamlContent)
-			diags, err := validate.ValidateReader(context.Background(), reader, "test.yml")
-			if err != nil {
-				t.Fatalf("ValidateReader failed: %v", err)
-			}
-
-			errors := filterErrors(diags)
-			if len(errors) > 0 {
-				t.Errorf("Expected no errors for %s, got %d:", tc.name, len(errors))
-				for _, diag := range errors {
-					t.Errorf("  %s:%d:%d: %s", diag.Path, diag.Line, diag.Column, diag.Message)
-				}
-			}
+			assertValidation(t, withFields(runnerYAML, tc.fields), tc.wantErr)
 		})
 	}
 }
 
 func TestValidateReader_ImageFieldsIndividually(t *testing.T) {
 	testCases := []struct {
-		name        string
-		yamlContent string
+		name    string
+		fields  string
+		wantErr string // substring of an expected error; empty means valid
 	}{
-		{
-			name: "preinstall",
-			yamlContent: `images:
-  test-image:
-    ami: ami-1234567890abcdef0
-    preinstall: |
-      apt-get update
-      apt-get install -y docker`,
-		},
-		{
-			name: "prerun",
-			yamlContent: `images:
-  test-image:
-    ami: ami-1234567890abcdef0
-    prerun: |
-      echo prepare-boot
-      systemctl restart docker`,
-		},
+		{"preinstall", "preinstall: |\n  apt-get update\n  apt-get install -y docker", ""},
+		{"prerun", "prerun: |\n  echo prepare-boot\n  systemctl restart docker", ""},
+		// Resolved image metadata must not be set by users.
+		{"main_disk_size", "main_disk_size: 120", "images.test.main_disk_size"},
+		{"root_device_name", "root_device_name: /dev/sda1", "images.test.root_device_name"},
 	}
 
 	for _, tc := range testCases {
 		t.Run(tc.name, func(t *testing.T) {
-			reader := strings.NewReader(tc.yamlContent)
-			diags, err := validate.ValidateReader(context.Background(), reader, "test.yml")
-			if err != nil {
-				t.Fatalf("ValidateReader failed: %v", err)
-			}
-
-			errors := filterErrors(diags)
-			if len(errors) > 0 {
-				t.Errorf("Expected no errors for image %s, got %d:", tc.name, len(errors))
-				for _, diag := range errors {
-					t.Errorf("  %s:%d:%d: %s", diag.Path, diag.Line, diag.Column, diag.Message)
-				}
-			}
+			assertValidation(t, withFields(imageYAML, tc.fields), tc.wantErr)
 		})
 	}
 }
@@ -992,6 +629,29 @@ func filterErrors(diags []validate.Diagnostic) []validate.Diagnostic {
 		}
 	}
 	return errors
+}
+
+// assertValidation validates yamlContent and expects no error diagnostics when
+// wantErr is empty, or at least one error containing wantErr otherwise.
+func assertValidation(t *testing.T, yamlContent, wantErr string) {
+	t.Helper()
+	diags, err := validate.ValidateReader(context.Background(), strings.NewReader(yamlContent), "test.yml")
+	if err != nil {
+		t.Fatalf("ValidateReader failed: %v", err)
+	}
+	errs := filterErrors(diags)
+	if wantErr == "" {
+		for _, diag := range errs {
+			t.Errorf("unexpected error: %s", diag.Message)
+		}
+		return
+	}
+	for _, diag := range errs {
+		if strings.Contains(diag.Message, wantErr) {
+			return
+		}
+	}
+	t.Errorf("expected an error containing %q, got %d errors: %v", wantErr, len(errs), errs)
 }
 
 // Helper function to check if a string contains a substring (case-insensitive)
