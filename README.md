@@ -302,7 +302,7 @@ Add to `.pre-commit-config.yaml`:
 ```yaml
 repos:
   - repo: https://github.com/runs-on/config
-    rev: v3.3.2
+    rev: v3.4.0
     hooks:
       - id: lint
         args: [--format, json]
