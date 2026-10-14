@@ -10,44 +10,38 @@ This guide helps AI agents understand how to work with this codebase. For detail
 ## Quick Reference
 
 ### Key Files
-- **Schema**: `schema/runs_on.cue` (main) and `pkg/validate/schema.cue` (copy for validation)
+- **Schema**: `schema/runs_on.cue` (source of truth); `make gen` copies it to `pkg/validate/schema.cue` (embedded by the validator)
 - **Tests**: `pkg/validate/validator_test.go`
 - **Test Data**: `schema/testdata/valid/` and `schema/testdata/invalid/`
 - **JSON Schema**: `schema/schema.json` (generated, don't edit manually)
 
-### Critical Rules
+### Rules
 
-1. **Always update both schema files**: When modifying the schema, update BOTH:
-   - `schema/runs_on.cue` (source of truth)
-   - `pkg/validate/schema.cue` (used by validator)
-
-2. **After schema changes**: Run `make gen` to regenerate `schema/schema.json`
-
-3. **Test files**: When adding/modifying schema, update corresponding test files in `schema/testdata/`
+- Edit only `schema/runs_on.cue`, then run `make gen`: it regenerates `schema/schema.json` and `pkg/schemajson/schema.json` and overwrites `pkg/validate/schema.cue`, so hand edits to any of those are lost.
+- Schema changes come with matching cases in `schema/testdata/valid/` and `schema/testdata/invalid/`.
 
 ## Common Tasks
 
 ### Adding a New Field to PoolSpec/RunnerSpec/ImageSpec
 
 1. Edit `schema/runs_on.cue` - add field definition
-2. Edit `pkg/validate/schema.cue` - add same field definition
-3. Add test cases:
+2. Add test cases:
    - Valid case: `schema/testdata/valid/`
    - Invalid case: `schema/testdata/invalid/`
-4. Update tests in `pkg/validate/validator_test.go` if needed
-5. Run `make gen` to regenerate JSON schema
-6. Run `make test` to verify
+3. Update tests in `pkg/validate/validator_test.go` if needed
+4. Run `make gen` to regenerate the derived schema files
+5. Run `make test` to verify
 
 ### Removing a Field
 
-1. Remove from both `schema/runs_on.cue` and `pkg/validate/schema.cue`
+1. Remove from `schema/runs_on.cue`
 2. Remove field from all test files in `schema/testdata/`
 3. Remove/update related tests in `pkg/validate/validator_test.go`
 4. Run `make gen` and `make test`
 
 ### Modifying Validation Rules
 
-1. Update constraints in both CUE schema files
+1. Update constraints in `schema/runs_on.cue` and run `make gen`
 2. Add/update test cases to verify the new rules
 3. Update tests in `validator_test.go`
 4. Run `make test` to ensure existing tests still pass
@@ -83,7 +77,7 @@ func TestValidateFile_InvalidFeature(t *testing.T) {
 
 ## Important Notes
 
-- **Pool names**: The `name` field was removed from `#PoolSpec`. Pool names are derived from the pool key in the YAML.
+- **Pool names**: Pool names come from the pool key in the YAML; `#PoolSpec` has no `name` field.
 - **Optional fields**: Use `field?: type` syntax
 - **Required fields**: Use `field: type` syntax (no `?`)
 - **Constraints**: Add with `&` operator, e.g., `name?: string & != "" & =~"^[a-z0-9_-]+$"`
@@ -97,23 +91,6 @@ make gen       # Regenerate schema.json
 make lint      # Run linter
 make setup     # Install dependencies
 ```
-
-## When Making Changes
-
-1. **Read the existing code** - understand patterns before modifying
-2. **Update both schemas** - `schema/runs_on.cue` AND `pkg/validate/schema.cue`
-3. **Add tests** - both valid and invalid cases
-4. **Regenerate JSON** - run `make gen`
-5. **Verify** - run `make test`
-6. **Check lints** - run `make lint`
-
-## Common Pitfalls
-
-- ❌ Editing only one schema file (must edit both)
-- ❌ Forgetting to run `make gen` after schema changes
-- ❌ Not updating test files when removing fields
-- ❌ Adding fields without tests
-- ❌ Manually editing `schema.json` (it's generated)
 
 ## Reference
 
