@@ -29,10 +29,8 @@ eval "$(mise activate bash)"  # for bash
 ├── pkg/
 │   ├── validate/        # Go validation package
 │   └── schemajson/      # JSON schema access
-├── cmd/
-│   └── lint/  # CLI linter binary
-└── .github/
-    └── workflows/      # CI/CD workflows
+└── cmd/
+    └── lint/            # CLI linter binary
 ```
 
 ## Workflow
@@ -40,9 +38,9 @@ eval "$(mise activate bash)"  # for bash
 ### Making Schema Changes
 
 1. **Edit the CUE schema**: Modify `schema/runs_on.cue`
-2. **Test locally**: Run `make test` to ensure tests pass
-3. **Generate JSON schema**: Run `make gen` to update `schema/schema.json`
-4. **Commit both files**: Always commit both `.cue` and `.json` files together
+2. **Regenerate derived files**: Run `make gen`. It writes `schema/schema.json` and `pkg/schemajson/schema.json`, and copies the schema to `pkg/validate/schema.cue`, which the validator embeds
+3. **Test locally**: Run `make test` to ensure tests pass
+4. **Commit the generated files**: Commit them together with `schema/runs_on.cue`
 
 ### Adding New Fields
 
@@ -50,7 +48,11 @@ When adding new fields to the schema:
 
 1. Update `schema/runs_on.cue` with the new field definition
 2. Add test cases in `schema/testdata/valid/` and `schema/testdata/invalid/`
-3. Update the Go types if needed (in the main runs-on repo)
+3. Update the Go types if needed. In the monorepo they live in `../pkg/specs`,
+   `../pkg/config`, `../pkg/pool` and `../pkg/fleet/config`. Fleet fields are also
+   declared in `../terraform/modules/fleet/variables.tf` and documented in
+   `../terraform/modules/fleet/README.md`; run `make check-fleet-catalog-contract`
+   at the monorepo root to check them against `schema/runs_on.cue`
 4. Regenerate JSON schema: `make gen`
 5. Update documentation in `README.md`
 
@@ -99,34 +101,30 @@ go mod tidy
 
 ## CI/CD
 
-The GitHub Actions workflow (`.github/workflows/ci.yml`) runs:
+The monorepo workflow `.github/workflows/config-test.yml` runs:
 
-1. Go tests
-2. Schema generation check (ensures `schema.json` is up to date)
+1. `make gen`, then fails if any of `schema/schema.json`,
+   `pkg/schemajson/schema.json`, `pkg/validate/schema.cue` or
+   `cue.mod/module.cue` differs from the committed copy
+2. Go tests via `make test`
 3. Linting with the monorepo root config via `make lint`
 
 ## Integration with RunsOn CLI
 
-The CLI integration uses a `replace` directive during development:
-
-```go
-//go:build dev
-// +build dev
-
-replace github.com/runs-on/config => ../config
-```
-
-For production, remove the replace directive and use the published module.
+In the monorepo, the root module resolves this directory with
+`replace github.com/runs-on/config => ./config` in `../go.mod`, so root checks
+that run with `GOWORK=off` still build against local changes. The CLI in
+`../cli` picks up `./config` through the root `go.work` instead. `cli/go.mod`
+must not add a `replace`, because it is mirrored to `runs-on/cli` as a
+standalone module; `scripts/check-go-workspace-scope.sh` at the monorepo root
+enforces this.
 
 ## Troubleshooting
 
-### Schema Not Found
+### Stale Embedded Schema
 
-If you get "schema file not found" errors:
-
-1. Ensure `schema/runs_on.cue` exists
-2. Check that the embed path is correct: `//go:embed ../../schema/runs_on.cue`
-3. Verify you're running from the correct directory
+The validator embeds `pkg/validate/schema.cue`, not `schema/runs_on.cue`. If
+validation ignores a schema change, run `make gen` to copy the schema there.
 
 ### CUE Compilation Errors
 
