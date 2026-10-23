@@ -16,7 +16,7 @@ The RunsOn config schema defines the structure and validation rules for reposito
 ### Prerequisites
 
 - [mise](https://mise.jdx.dev/) (formerly rtx) - for managing tool versions
-- Go 1.26.1 (installed via mise)
+- Go, at the version pinned in [`mise.toml`](mise.toml) (installed by `mise install`)
 
 ### Setup
 
@@ -208,10 +208,17 @@ images:
 
 ### Pool Specification
 
+The pool name is its key under `pools`. A pool's `runner` must name a runner
+defined under `runners` in the same file.
+
 ```yaml
+runners:
+  small-x64:
+    cpu: 2
+    image: ubuntu24-full-x64
+
 pools:
   dependabot:
-    name: dependabot
     env: production
     timezone: UTC
     runner: small-x64
@@ -279,15 +286,6 @@ go install ./cmd/lint
 Add this to your workflow:
 
 ```yaml
-- name: Validate runs-on.yml
-  uses: docker://ghcr.io/runs-on/config-lint:latest
-  with:
-    args: .github/runs-on.yml
-```
-
-Or use the binary:
-
-```yaml
 - name: Install linter
   run: go install github.com/runs-on/config/cmd/lint@latest
 
@@ -297,16 +295,19 @@ Or use the binary:
 
 ### Pre-commit Hook
 
-Add to `.pre-commit-config.yaml`:
+The pre-commit hook ships with the [`roc` CLI](https://github.com/runs-on/cli)
+and runs `roc lint`, so [install `roc`](https://github.com/runs-on/cli#installation)
+and keep it on your `PATH`. Add to `.pre-commit-config.yaml`:
 
 ```yaml
 repos:
-  - repo: https://github.com/runs-on/config
-    rev: v3.5.0
+  - repo: https://github.com/runs-on/cli
+    rev: v3.6.0
     hooks:
-      - id: lint
-        args: [--format, json]
+      - id: roc-lint
 ```
+
+See [`roc lint`](https://github.com/runs-on/cli#roc-lint) for details.
 
 ## License
 

@@ -2,7 +2,7 @@ MONOREPO_ROOT := ..
 VERSION ?= $(shell if [ -f ../VERSION ]; then tr -d '\n' < ../VERSION; elif [ -f VERSION ]; then tr -d '\n' < VERSION; elif git describe --tags --exact-match >/dev/null 2>&1; then git describe --tags --exact-match; else echo dev; fi)
 LDFLAGS = -X github.com/runs-on/config/internal/version.Version=$(VERSION)
 
-.PHONY: gen lint test install clean sync-schema setup update-dependents sync-metadata version
+.PHONY: gen lint test install clean sync-schema setup sync-metadata version
 
 setup:
 	@echo "Installing dependencies with mise..."
@@ -39,24 +39,6 @@ install:
 clean:
 	@echo "Cleaning generated files..."
 	rm -f schema/schema.json pkg/schemajson/schema.json
-
-update-dependents:
-	@echo "Updating dependents to latest config module..."
-	@SHA=$$(git rev-parse HEAD); \
-	echo "Using commit SHA: $$SHA"; \
-	if [ -d "../cli" ]; then \
-		echo "Updating ../config..."; \
-		cd ../cli && mise exec -- go get -u github.com/runs-on/config@$$SHA && mise exec -- go mod tidy; \
-	else \
-		echo "Warning: ../cli not found, skipping"; \
-	fi; \
-	if [ -d "../runs-on/server" ]; then \
-		echo "Updating ../config/server..."; \
-		cd ../runs-on/server && mise exec -- go get -u github.com/runs-on/config@$$SHA && mise exec -- go mod tidy; \
-	else \
-		echo "Warning: ../runs-on/server not found, skipping"; \
-	fi
-	@echo "Done updating dependents"
 
 sync-metadata:
 	@VERSION="$(VERSION)" perl -0pi -e 's{rev: v[0-9A-Za-z.\\-]+}{rev: $$ENV{VERSION}}g' README.md

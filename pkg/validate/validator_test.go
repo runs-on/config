@@ -11,30 +11,36 @@ import (
 )
 
 func TestValidateFile_Valid(t *testing.T) {
-	testFiles := []string{
-		"../../schema/testdata/valid/basic.yml",
-		"../../schema/testdata/valid/with-anchors.yml",
-		"../../schema/testdata/valid/pool-complete.yml",
-		"../../schema/testdata/valid/pool-runner-reference.yml",
-		"../../schema/testdata/valid/nested-virt.yml",
-		"../../schema/testdata/valid/spot-priorities.yml",
-		"../../schema/testdata/valid/github-private-runs-on.yml",
-	}
-
-	for _, testFile := range testFiles {
-		t.Run(filepath.Base(testFile), func(t *testing.T) {
-			diags, err := validate.ValidateFile(context.Background(), testFile)
+	for _, tt := range []struct {
+		file        string
+		wantWarning string // when set, the only expected warning
+	}{
+		{file: "../../schema/testdata/valid/basic.yml"},
+		{file: "../../schema/testdata/valid/with-anchors.yml"},
+		{file: "../../schema/testdata/valid/pool-complete.yml"},
+		{file: "../../schema/testdata/valid/pool-runner-reference.yml"},
+		{file: "../../schema/testdata/valid/nested-virt.yml"},
+		{file: "../../schema/testdata/valid/spot-priorities.yml"},
+		{file: "../../schema/testdata/valid/github-private-runs-on.yml"},
+		{file: "../../schema/testdata/valid/plus-separated-values.yml"},
+		{file: "../../schema/testdata/valid/with-deprecated-disk.yml", wantWarning: "field 'disk' is deprecated and ignored"},
+	} {
+		t.Run(filepath.Base(tt.file), func(t *testing.T) {
+			diags, err := validate.ValidateFile(context.Background(), tt.file)
 			if err != nil {
 				t.Fatalf("ValidateFile failed: %v", err)
 			}
 
-			// Filter out warnings - only check for errors
-			errors := filterErrors(diags)
-			if len(errors) > 0 {
-				t.Errorf("Expected no errors for valid file, got %d:", len(errors))
-				for _, diag := range errors {
-					t.Errorf("  %s:%d:%d: %s", diag.Path, diag.Line, diag.Column, diag.Message)
+			var warnings []string
+			for _, diag := range diags {
+				if diag.Severity == validate.SeverityWarning {
+					warnings = append(warnings, diag.Message)
+					continue
 				}
+				t.Errorf("unexpected error: %s:%d:%d: %s", diag.Path, diag.Line, diag.Column, diag.Message)
+			}
+			if tt.wantWarning != "" && (len(warnings) != 1 || !strings.Contains(warnings[0], tt.wantWarning)) {
+				t.Errorf("expected one warning containing %q, got %q", tt.wantWarning, warnings)
 			}
 		})
 	}
@@ -551,6 +557,45 @@ func TestValidateReader_ImageFieldsIndividually(t *testing.T) {
 	for _, tc := range testCases {
 		t.Run(tc.name, func(t *testing.T) {
 			assertValidation(t, withFields(imageYAML, tc.fields), tc.wantErr)
+		})
+	}
+}
+
+// Diagnostics must point at the YAML source, not at the CUE schema.
+func TestValidateReader_DiagnosticPositions(t *testing.T) {
+	const runner = "runners:\n  r:\n    cpu: 2\n"
+	testCases := []struct {
+		name         string
+		yaml         string
+		wantMsg      string
+		line, column int
+	}{
+		{"unknown field", "pools:\n  a:\n    name: x\n    runner: r\n" + runner, "pools.a.name", 3, 5},
+		{"invalid value", "runners:\n  r:\n    cpu: true\n", "runners.r.cpu", 3, 5},
+		{"quoted label", "runners:\n  small-x64:\n    spot: sometimes\n", `runners."small-x64".spot`, 3, 5},
+		{"list item", "pools:\n  a:\n    runner: r\n    schedule:\n      - name: default\n        hot: -1\n" + runner, "schedule.0.hot", 6, 9},
+		{"missing field at parent", "pools:\n  a:\n    env: production\n" + runner, "pools.a.runner", 2, 3},
+		{"merge key at anchor", "x-base: &base\n  cpu: true\nrunners:\n  r:\n    <<: *base\n", "runners.r.cpu", 2, 3},
+		{"aliased key", "x-key: &key cpu\nrunners:\n  r:\n    *key : true\n", "runners.r.cpu", 4, 5},
+		{"deprecated runner field", "runners:\n  r:\n    cpu: 2\n    disk: large\n", "field 'disk' is deprecated", 4, 5},
+		{"deprecated pool field", "pools:\n  a:\n    runner: r\n    environment: production\n" + runner, "field 'environment' is deprecated", 4, 5},
+	}
+
+	for _, tc := range testCases {
+		t.Run(tc.name, func(t *testing.T) {
+			diags, err := validate.ValidateReader(context.Background(), strings.NewReader(tc.yaml), "test.yml")
+			if err != nil {
+				t.Fatalf("ValidateReader failed: %v", err)
+			}
+			for _, diag := range diags {
+				if strings.Contains(diag.Message, tc.wantMsg) {
+					if diag.Line != tc.line || diag.Column != tc.column {
+						t.Errorf("%s: got %d:%d, want %d:%d", diag.Message, diag.Line, diag.Column, tc.line, tc.column)
+					}
+					return
+				}
+			}
+			t.Errorf("expected a diagnostic containing %q, got %v", tc.wantMsg, diags)
 		})
 	}
 }
