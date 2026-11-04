@@ -6,12 +6,14 @@ import (
 	"fmt"
 	"io"
 	"os"
+	"strconv"
 	"strings"
 
 	"cuelang.org/go/cue"
 	"cuelang.org/go/cue/cuecontext"
 	"cuelang.org/go/cue/errors"
-	"gopkg.in/yaml.v3"
+	"cuelang.org/go/cue/literal"
+	"go.yaml.in/yaml/v3"
 )
 
 //go:embed schema.cue
@@ -53,9 +55,15 @@ func ValidateReader(ctx context.Context, r io.Reader, sourceName string) ([]Diag
 		return nil, fmt.Errorf("failed to read content: %w", err)
 	}
 
-	// Parse YAML (this will expand anchors automatically)
+	// Parse YAML once: the node tree maps CUE errors back to source
+	// positions, and decoding it expands anchors
+	var doc yaml.Node
 	var yamlData any
-	if err := yaml.Unmarshal(data, &yamlData); err != nil {
+	err = yaml.Unmarshal(data, &doc)
+	if err == nil {
+		err = doc.Decode(&yamlData)
+	}
+	if err != nil {
 		return []Diagnostic{
 			{
 				Path:     sourceName,
@@ -96,7 +104,7 @@ func ValidateReader(ctx context.Context, r io.Reader, sourceName string) ([]Diag
 
 	// Validate for type errors and constraint violations
 	if err := unified.Validate(); err != nil {
-		schemaErrors = convertCueErrors(err, sourceName)
+		schemaErrors = convertCueErrors(err, sourceName, &doc)
 	}
 
 	// Check for missing required fields (incomplete values)
@@ -105,7 +113,7 @@ func ValidateReader(ctx context.Context, r io.Reader, sourceName string) ([]Diag
 	if err := unified.Validate(cue.Concrete(true)); err != nil {
 		// Only add errors that aren't already captured by the first Validate()
 		// Check if this is a different set of errors
-		incompleteErrors := convertCueErrors(err, sourceName)
+		incompleteErrors := convertCueErrors(err, sourceName, &doc)
 		// Add incomplete errors that aren't duplicates
 		existingMsgs := make(map[string]bool)
 		for _, diag := range schemaErrors {
@@ -119,7 +127,7 @@ func ValidateReader(ctx context.Context, r io.Reader, sourceName string) ([]Diag
 	}
 
 	// Check for deprecated fields and add warnings
-	deprecationWarnings := checkDeprecatedFields(yamlData, sourceName, data)
+	deprecationWarnings := checkDeprecatedFields(&doc, sourceName)
 
 	// Check for invalid runner references in pools
 	runnerReferenceErrors := checkRunnerReferences(yamlData, sourceName)
@@ -168,20 +176,16 @@ func loadSchema() (cue.Value, error) {
 	return config, nil
 }
 
-// convertCueErrors converts CUE validation errors to Diagnostic slice
-func convertCueErrors(err error, sourceName string) []Diagnostic {
+// convertCueErrors converts CUE validation errors to Diagnostic slice.
+// The data was encoded from plain Go values, so CUE's own positions point into
+// the schema; each error's path is mapped back to the YAML document instead.
+func convertCueErrors(err error, sourceName string, doc *yaml.Node) []Diagnostic {
 	var diagnostics []Diagnostic
 
 	// CUE uses errors.List for multiple errors
 	errList := errors.Errors(err)
 	for _, err := range errList {
-		pos := errors.Positions(err)
-		line := 0
-		column := 0
-		if len(pos) > 0 {
-			line = pos[0].Line()
-			column = pos[0].Column()
-		}
+		line, column := yamlPosition(doc, errors.Path(err))
 
 		msg := err.Error()
 		// Clean up CUE error messages
@@ -198,6 +202,78 @@ func convertCueErrors(err error, sourceName string) []Diagnostic {
 	}
 
 	return diagnostics
+}
+
+// yamlPosition returns the position of the YAML key or list item that a CUE
+// error path names, such as ["#Config", "pools", "a", "name"]. A path ending
+// in a field the file does not set, such as a missing required field, resolves
+// to its deepest existing ancestor. It returns 0, 0 when nothing matches.
+func yamlPosition(doc *yaml.Node, path []string) (line, column int) {
+	if doc.Kind != yaml.DocumentNode || len(doc.Content) == 0 {
+		return 0, 0
+	}
+	if len(path) > 0 && path[0] == "#Config" {
+		path = path[1:]
+	}
+
+	node := doc.Content[0]
+	for _, selector := range path {
+		var located *yaml.Node
+		switch node = resolveAlias(node); node.Kind {
+		case yaml.MappingNode:
+			// CUE quotes labels that are not identifiers, such as "small-x64".
+			label := selector
+			if unquoted, err := literal.Unquote(selector); err == nil {
+				label = unquoted
+			}
+			located, node = mappingEntry(node, label)
+		case yaml.SequenceNode:
+			if i, err := strconv.Atoi(selector); err == nil && i >= 0 && i < len(node.Content) {
+				located, node = node.Content[i], node.Content[i]
+			}
+		}
+		if located == nil {
+			break
+		}
+		line, column = located.Line, located.Column
+	}
+	return line, column
+}
+
+// mappingEntry returns the key and value nodes for key in a YAML mapping.
+// Keys set through "<<" merge keys resolve to the anchored mapping that sets
+// them, with explicit keys taking precedence as they do when decoding.
+func mappingEntry(mapping *yaml.Node, key string) (keyNode, valueNode *yaml.Node) {
+	for i := 0; i+1 < len(mapping.Content); i += 2 {
+		if k := mapping.Content[i]; k.ShortTag() != "!!merge" && resolveAlias(k).Value == key {
+			return k, mapping.Content[i+1]
+		}
+	}
+	for i := 0; i+1 < len(mapping.Content); i += 2 {
+		if mapping.Content[i].ShortTag() != "!!merge" {
+			continue
+		}
+		merged := resolveAlias(mapping.Content[i+1])
+		sources := []*yaml.Node{merged}
+		if merged.Kind == yaml.SequenceNode {
+			sources = merged.Content
+		}
+		for _, source := range sources {
+			if source = resolveAlias(source); source.Kind == yaml.MappingNode {
+				if k, v := mappingEntry(source, key); k != nil {
+					return k, v
+				}
+			}
+		}
+	}
+	return nil, nil
+}
+
+func resolveAlias(node *yaml.Node) *yaml.Node {
+	for node.Kind == yaml.AliasNode && node.Alias != nil {
+		node = node.Alias
+	}
+	return node
 }
 
 // checkRunnerReferences checks that pool runners exist in the runners map
@@ -279,19 +355,11 @@ func checkRunnerReferences(yamlData any, sourceName string) []Diagnostic {
 }
 
 // checkDeprecatedFields checks for deprecated fields and returns warnings
-func checkDeprecatedFields(yamlData any, sourceName string, originalYAML []byte) []Diagnostic {
+func checkDeprecatedFields(doc *yaml.Node, sourceName string) []Diagnostic {
 	var warnings []Diagnostic
 
-	// Parse YAML with line information to get accurate line numbers
-	var yamlNode yaml.Node
-	if err := yaml.Unmarshal(originalYAML, &yamlNode); err != nil {
-		// If we can't parse with line info, skip line numbers
-		return checkDeprecatedFieldsRecursive(yamlData, sourceName, "")
-	}
-
-	// Check for deprecated fields
-	if yamlNode.Kind == yaml.DocumentNode && len(yamlNode.Content) > 0 {
-		root := yamlNode.Content[0]
+	if doc.Kind == yaml.DocumentNode && len(doc.Content) > 0 {
+		root := doc.Content[0]
 		if root.Kind == yaml.MappingNode {
 			for i := 0; i < len(root.Content); i += 2 {
 				if i+1 >= len(root.Content) {
@@ -357,127 +425,6 @@ func checkDeprecatedFields(yamlData any, sourceName string, originalYAML []byte)
 					}
 				}
 			}
-		}
-	}
-
-	return warnings
-}
-
-// checkDeprecatedFieldsRecursive is a fallback that checks without line numbers
-func checkDeprecatedFieldsRecursive(data any, sourceName string, path string) []Diagnostic {
-	var warnings []Diagnostic
-
-	switch v := data.(type) {
-	case map[string]any:
-		for key, value := range v {
-			currentPath := path
-			if currentPath != "" {
-				currentPath += "."
-			}
-			currentPath += key
-
-			switch key {
-			case "runners":
-				// Check runners map
-				if runnersMap, ok := value.(map[string]any); ok {
-					for runnerKey, runnerValue := range runnersMap {
-						if runnerSpec, ok := runnerValue.(map[string]any); ok {
-							if _, hasDisk := runnerSpec["disk"]; hasDisk {
-								warnings = append(warnings, Diagnostic{
-									Path:     sourceName,
-									Line:     0,
-									Column:   0,
-									Message:  fmt.Sprintf("field 'runners.%s.disk' is deprecated and ignored; use 'volume' instead (e.g., volume=80gb:gp3:125mibps:3000iops)", runnerKey),
-									Severity: SeverityWarning,
-								})
-							}
-						}
-					}
-				}
-			case "pools":
-				// Check pools map
-				if poolsMap, ok := value.(map[string]any); ok {
-					for poolKey, poolValue := range poolsMap {
-						if poolSpec, ok := poolValue.(map[string]any); ok {
-							if _, hasEnvironment := poolSpec["environment"]; hasEnvironment {
-								warnings = append(warnings, Diagnostic{
-									Path:     sourceName,
-									Line:     0,
-									Column:   0,
-									Message:  fmt.Sprintf("field 'pools.%s.environment' is deprecated, use 'env' instead", poolKey),
-									Severity: SeverityWarning,
-								})
-							}
-						}
-					}
-				}
-			default:
-				// Recurse into nested structures
-				warnings = append(warnings, checkDeprecatedFieldsRecursive(value, sourceName, currentPath)...)
-			}
-		}
-	case map[any]any:
-		for key, value := range v {
-			keyStr, ok := key.(string)
-			if !ok {
-				continue
-			}
-			currentPath := path
-			if currentPath != "" {
-				currentPath += "."
-			}
-			currentPath += keyStr
-
-			if keyStr == "runners" {
-				// Check runners map
-				if runnersMap, ok := value.(map[any]any); ok {
-					for runnerKey, runnerValue := range runnersMap {
-						runnerKeyStr, ok := runnerKey.(string)
-						if !ok {
-							continue
-						}
-						if runnerSpec, ok := runnerValue.(map[any]any); ok {
-							if _, hasDisk := runnerSpec["disk"]; hasDisk {
-								warnings = append(warnings, Diagnostic{
-									Path:     sourceName,
-									Line:     0,
-									Column:   0,
-									Message:  fmt.Sprintf("field 'runners.%s.disk' is deprecated and ignored; use 'volume' instead (e.g., volume=80gb:gp3:125mibps:3000iops)", runnerKeyStr),
-									Severity: SeverityWarning,
-								})
-							}
-						}
-					}
-				}
-			} else if keyStr == "pools" {
-				// Check pools map
-				if poolsMap, ok := value.(map[any]any); ok {
-					for poolKey, poolValue := range poolsMap {
-						poolKeyStr, ok := poolKey.(string)
-						if !ok {
-							continue
-						}
-						if poolSpec, ok := poolValue.(map[any]any); ok {
-							if _, hasEnvironment := poolSpec["environment"]; hasEnvironment {
-								warnings = append(warnings, Diagnostic{
-									Path:     sourceName,
-									Line:     0,
-									Column:   0,
-									Message:  fmt.Sprintf("field 'pools.%s.environment' is deprecated, use 'env' instead", poolKeyStr),
-									Severity: SeverityWarning,
-								})
-							}
-						}
-					}
-				}
-			} else {
-				// Recurse into nested structures
-				warnings = append(warnings, checkDeprecatedFieldsRecursive(value, sourceName, currentPath)...)
-			}
-		}
-	case []any:
-		for i, item := range v {
-			warnings = append(warnings, checkDeprecatedFieldsRecursive(item, sourceName, fmt.Sprintf("%s[%d]", path, i))...)
 		}
 	}
 
