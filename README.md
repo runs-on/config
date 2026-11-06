@@ -302,7 +302,7 @@ and keep it on your `PATH`. Add to `.pre-commit-config.yaml`:
 ```yaml
 repos:
   - repo: https://github.com/runs-on/cli
-    rev: v3.6.0
+    rev: v3.6.1
     hooks:
       - id: roc-lint
 ```
