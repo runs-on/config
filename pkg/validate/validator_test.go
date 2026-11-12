@@ -2,8 +2,10 @@ package validate_test
 
 import (
 	"context"
+	"fmt"
 	"os"
 	"path/filepath"
+	"runtime"
 	"strings"
 	"testing"
 
@@ -660,6 +662,50 @@ pools:
 				for _, diag := range errors {
 					t.Errorf("  %s:%d:%d: %s", diag.Path, diag.Line, diag.Column, diag.Message)
 				}
+			}
+		})
+	}
+}
+
+// billionLaughs nests ten aliases per level, nine levels deep: a few hundred
+// bytes that stand for a billion scalars.
+func billionLaughs() string {
+	var b strings.Builder
+	b.WriteString("x-0: &l0 [lol, lol, lol, lol, lol, lol, lol, lol, lol, lol]\n")
+	for i := 1; i < 9; i++ {
+		fmt.Fprintf(&b, "x-%d: &l%d [%s]\n", i, i, strings.TrimSuffix(strings.Repeat(fmt.Sprintf("*l%d, ", i-1), 10), ", "))
+	}
+	return b.String()
+}
+
+// ordinaryAliases reuses a runner and its setup script across 30 runners.
+func ordinaryAliases() string {
+	var b strings.Builder
+	b.WriteString("runners:\n  base: &base\n    cpu: [2]\n    family: [c7a]\n    image: ubuntu22-full-x64\n")
+	b.WriteString("    preinstall: &script |\n      " + strings.Repeat("echo setup; ", 200) + "\n")
+	for i := range 30 {
+		fmt.Fprintf(&b, "  runner-%d:\n    <<: *base\n    cpu: [%d]\n    preinstall: *script\n", i, 2+i%3*2)
+	}
+	return b.String()
+}
+
+func TestValidateReader_AliasExpansion(t *testing.T) {
+	for _, tc := range []struct {
+		name    string
+		yaml    string
+		wantErr string
+	}{
+		{name: "billion laughs", yaml: billionLaughs(), wantErr: "YAML aliases expand"},
+		{name: "large scalar aliased many times", yaml: "x-script: &s " + strings.Repeat("a", 128<<10) + "\nx-copies: [" + strings.TrimSuffix(strings.Repeat("*s, ", 64), ", ") + "]\n", wantErr: "YAML aliases expand"},
+		{name: "ordinary anchors and merge keys", yaml: ordinaryAliases()},
+	} {
+		t.Run(tc.name, func(t *testing.T) {
+			var before, after runtime.MemStats
+			runtime.ReadMemStats(&before)
+			assertValidation(t, tc.yaml, tc.wantErr)
+			runtime.ReadMemStats(&after)
+			if allocated := after.TotalAlloc - before.TotalAlloc; tc.wantErr != "" && allocated > 64<<20 {
+				t.Errorf("rejecting the document allocated %d MiB", allocated>>20)
 			}
 		})
 	}

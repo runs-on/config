@@ -61,6 +61,10 @@ func ValidateReader(ctx context.Context, r io.Reader, sourceName string) ([]Diag
 	var yamlData any
 	err = yaml.Unmarshal(data, &doc)
 	if err == nil {
+		// Bound alias expansion before anything below copies it out
+		if expansionErr := CheckAliasExpansion(&doc); expansionErr != nil {
+			return []Diagnostic{{Path: sourceName, Message: expansionErr.Error(), Severity: SeverityError}}, nil
+		}
 		err = doc.Decode(&yamlData)
 	}
 	if err != nil {
