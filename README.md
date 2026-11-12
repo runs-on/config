@@ -250,6 +250,10 @@ runners:
     cpu: [4]
 ```
 
+Aliases may add at most 4 MiB to a file once expanded (each value reached
+through an alias counts its length plus 32 bytes). A file above that is
+rejected, as protection against "billion laughs" documents.
+
 ## Development
 
 ### Updating the Schema
@@ -302,7 +306,7 @@ and keep it on your `PATH`. Add to `.pre-commit-config.yaml`:
 ```yaml
 repos:
   - repo: https://github.com/runs-on/cli
-    rev: v3.6.0
+    rev: v3.6.1
     hooks:
       - id: roc-lint
 ```

@@ -1,6 +1,6 @@
 module github.com/runs-on/config
 
-go 1.27.3
+go 1.27.4
 
 require (
 	cuelang.org/go v0.17.1
