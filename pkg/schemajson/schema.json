@@ -254,6 +254,10 @@
                 "volume": {
                     "type": "string",
                     "description": "Volume specification: format: size:type:throughput:iops\ne.g., \"80gb:gp3:125mibps:3000iops\""
+                },
+                "zone": {
+                    "description": "Availability zones the runner launches in, by name (e.g., \"eu-west-1a\")\nor zone ID (e.g., \"euw1-az1\"): one string, \"+\"-separated, or an array",
+                    "$ref": "#/$defs/StringArray"
                 }
             }
         },
