@@ -25,6 +25,14 @@ func TestValidateFile_Valid(t *testing.T) {
 		{file: "../../schema/testdata/valid/spot-priorities.yml"},
 		{file: "../../schema/testdata/valid/github-private-runs-on.yml"},
 		{file: "../../schema/testdata/valid/plus-separated-values.yml"},
+		{file: "../../schema/testdata/valid/zone.yml"},
+		{file: "../../schema/testdata/valid/all-top-level-fields.yml"},
+		{file: "../../schema/testdata/valid/extends-only.yml"},
+		{file: "../../schema/testdata/valid/runners-only.yml"},
+		{file: "../../schema/testdata/valid/images-only.yml"},
+		{file: "../../schema/testdata/valid/pools-only.yml"},
+		{file: "../../schema/testdata/valid/admins-only.yml"},
+		{file: "../../schema/testdata/valid/with-custom-fields.yml"},
 		{file: "../../schema/testdata/valid/with-deprecated-disk.yml", wantWarning: "field 'disk' is deprecated and ignored"},
 	} {
 		t.Run(filepath.Base(tt.file), func(t *testing.T) {
@@ -170,156 +178,6 @@ func TestValidateReader(t *testing.T) {
 	errors := filterErrors(diags)
 	if len(errors) > 0 {
 		t.Errorf("Expected no errors for valid file, got %d:", len(errors))
-		for _, diag := range errors {
-			t.Errorf("  %s:%d:%d: %s", diag.Path, diag.Line, diag.Column, diag.Message)
-		}
-	}
-}
-
-func TestValidateFile_AllTopLevelFields(t *testing.T) {
-	testFile := "../../schema/testdata/valid/all-top-level-fields.yml"
-	diags, err := validate.ValidateFile(context.Background(), testFile)
-	if err != nil {
-		t.Fatalf("ValidateFile failed: %v", err)
-	}
-
-	errors := filterErrors(diags)
-	if len(errors) > 0 {
-		t.Errorf("Expected no errors for file with all top-level fields, got %d:", len(errors))
-		for _, diag := range errors {
-			t.Errorf("  %s:%d:%d: %s", diag.Path, diag.Line, diag.Column, diag.Message)
-		}
-	}
-}
-
-func TestValidateFile_TopLevelFieldsIndividually(t *testing.T) {
-	testFiles := []struct {
-		name     string
-		filePath string
-	}{
-		{"extends-only", "../../schema/testdata/valid/extends-only.yml"},
-		{"runners-only", "../../schema/testdata/valid/runners-only.yml"},
-		{"images-only", "../../schema/testdata/valid/images-only.yml"},
-		{"pools-only", "../../schema/testdata/valid/pools-only.yml"},
-		{"admins-only", "../../schema/testdata/valid/admins-only.yml"},
-	}
-
-	for _, tt := range testFiles {
-		t.Run(tt.name, func(t *testing.T) {
-			diags, err := validate.ValidateFile(context.Background(), tt.filePath)
-			if err != nil {
-				t.Fatalf("ValidateFile failed: %v", err)
-			}
-
-			errors := filterErrors(diags)
-			if len(errors) > 0 {
-				t.Errorf("Expected no errors for %s, got %d:", tt.name, len(errors))
-				for _, diag := range errors {
-					t.Errorf("  %s:%d:%d: %s", diag.Path, diag.Line, diag.Column, diag.Message)
-				}
-			}
-		})
-	}
-}
-
-func TestValidateFile_CustomFieldsAllowed(t *testing.T) {
-	testFile := "../../schema/testdata/valid/with-custom-fields.yml"
-	diags, err := validate.ValidateFile(context.Background(), testFile)
-	if err != nil {
-		t.Fatalf("ValidateFile failed: %v", err)
-	}
-
-	errors := filterErrors(diags)
-	if len(errors) > 0 {
-		t.Errorf("Expected no errors for file with custom fields (x-defaults, etc.), got %d:", len(errors))
-		for _, diag := range errors {
-			t.Errorf("  %s:%d:%d: %s", diag.Path, diag.Line, diag.Column, diag.Message)
-		}
-	}
-}
-
-func TestValidateReader_CustomFieldsAllowed(t *testing.T) {
-	// Test with inline YAML that includes custom fields
-	yamlContent := `x-defaults: &defaults
-  cpu: [2]
-  ram: [16]
-  family: [c7a]
-
-custom-field: "some value"
-another-custom:
-  nested: value
-
-runners:
-  test-runner:
-    <<: *defaults
-    image: ubuntu22-full-x64
-
-images:
-  test-image:
-    ami: ami-1234567890abcdef0
-
-pools:
-  test-pool:
-    runner: test-runner
-    schedule:
-      - name: default
-        hot: 1
-        stopped: 2
-
-admins:
-  - admin1
-`
-
-	reader := strings.NewReader(yamlContent)
-	diags, err := validate.ValidateReader(context.Background(), reader, "test.yml")
-	if err != nil {
-		t.Fatalf("ValidateReader failed: %v", err)
-	}
-
-	errors := filterErrors(diags)
-	if len(errors) > 0 {
-		t.Errorf("Expected no errors for YAML with custom fields and anchors, got %d:", len(errors))
-		for _, diag := range errors {
-			t.Errorf("  %s:%d:%d: %s", diag.Path, diag.Line, diag.Column, diag.Message)
-		}
-	}
-}
-
-func TestValidateReader_AllTopLevelFields(t *testing.T) {
-	yamlContent := `_extends: ".github-private"
-
-runners:
-  test-runner:
-    cpu: [2]
-    ram: [16]
-    family: [c7a]
-
-images:
-  test-image:
-    ami: ami-1234567890abcdef0
-
-pools:
-  test-pool:
-    runner: test-runner
-    schedule:
-      - name: default
-        hot: 1
-        stopped: 2
-
-admins:
-  - admin1
-  - admin2
-`
-
-	reader := strings.NewReader(yamlContent)
-	diags, err := validate.ValidateReader(context.Background(), reader, "test.yml")
-	if err != nil {
-		t.Fatalf("ValidateReader failed: %v", err)
-	}
-
-	errors := filterErrors(diags)
-	if len(errors) > 0 {
-		t.Errorf("Expected no errors for YAML with all top-level fields, got %d:", len(errors))
 		for _, diag := range errors {
 			t.Errorf("  %s:%d:%d: %s", diag.Path, diag.Line, diag.Column, diag.Message)
 		}
@@ -598,71 +456,6 @@ func TestValidateReader_DiagnosticPositions(t *testing.T) {
 				}
 			}
 			t.Errorf("expected a diagnostic containing %q, got %v", tc.wantMsg, diags)
-		})
-	}
-}
-
-func TestValidateReader_EachTopLevelField(t *testing.T) {
-	testCases := []struct {
-		name        string
-		yamlContent string
-	}{
-		{
-			name:        "_extends",
-			yamlContent: `_extends: ".github-private"`,
-		},
-		{
-			name: "runners",
-			yamlContent: `runners:
-  test-runner:
-    cpu: [2]
-    ram: [16]
-    family: [c7a]`,
-		},
-		{
-			name: "images",
-			yamlContent: `images:
-  test-image:
-    ami: ami-1234567890abcdef0`,
-		},
-		{
-			name: "pools",
-			yamlContent: `runners:
-  test-runner:
-    cpu: [2]
-    ram: [16]
-    family: [c7a]
-pools:
-  test-pool:
-    runner: test-runner
-    schedule:
-      - name: default
-        hot: 1
-        stopped: 2`,
-		},
-		{
-			name: "admins",
-			yamlContent: `admins:
-  - admin1
-  - admin2`,
-		},
-	}
-
-	for _, tc := range testCases {
-		t.Run(tc.name, func(t *testing.T) {
-			reader := strings.NewReader(tc.yamlContent)
-			diags, err := validate.ValidateReader(context.Background(), reader, "test.yml")
-			if err != nil {
-				t.Fatalf("ValidateReader failed: %v", err)
-			}
-
-			errors := filterErrors(diags)
-			if len(errors) > 0 {
-				t.Errorf("Expected no errors for %s field, got %d:", tc.name, len(errors))
-				for _, diag := range errors {
-					t.Errorf("  %s:%d:%d: %s", diag.Path, diag.Line, diag.Column, diag.Message)
-				}
-			}
 		})
 	}
 }
