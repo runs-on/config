@@ -93,6 +93,10 @@ package schema
 	// Tags for the runner
 	tags?: #StringArray
 
+	// Availability zones the runner launches in, by name (e.g., "eu-west-1a")
+	// or zone ID (e.g., "euw1-az1"): one string, "+"-separated, or an array
+	zone?: #StringArray
+
 	// Debug mode (bool or string "true"/"false")
 	debug?: #BoolOrString
 }

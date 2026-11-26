@@ -1,0 +1,16 @@
+runners:
+  next-to-the-database:
+    family: [m7a]
+    image: ubuntu24-full-x64
+    zone: eu-west-1a
+  either-zone-id:
+    family: [m7a]
+    image: ubuntu24-full-x64
+    zone: [euw1-az1, euw1-az2]
+pools:
+  db-dump:
+    runner: next-to-the-database
+    schedule:
+      - name: default
+        hot: 1
+        stopped: 0
