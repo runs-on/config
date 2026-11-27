@@ -117,6 +117,7 @@ runners:
     sticky: "go-cache:60gb:gp3:750mibps:6000iops"  # Sticky disk spec; restores default to 200 MiB/s initialization
     extras: ["s3-cache"]   # Extra features
     tags: ["Team:DevOps"]  # Tags
+    zone: eu-west-1a       # Availability zones (name or zone ID, e.g. euw1-az1)
     prerun: |              # Runs before each runner start / boot
       echo prepare-runner
 ```
@@ -306,7 +307,7 @@ and keep it on your `PATH`. Add to `.pre-commit-config.yaml`:
 ```yaml
 repos:
   - repo: https://github.com/runs-on/cli
-    rev: v3.6.2
+    rev: v3.7.0
     hooks:
       - id: roc-lint
 ```

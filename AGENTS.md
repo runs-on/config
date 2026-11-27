@@ -18,11 +18,11 @@ targets exist only there.
   and with `variables.tf` and `README.md` in `../terraform/modules/fleet/`: run
   `make check-fleet-catalog-contract` at the repo root (`make test` here skips
   it).
-- `pkg/validate` is a public API that also gates `roc lint`, Flex repo configs
-  (logged only), and the Fleet Terraform catalog, which fleetd refuses to load
-  on any diagnostic, warnings included (`validateWithSharedSchema` in
-  `../pkg/fleet/config/config.go`). Treat a tighter constraint or a new warning
-  as a breaking change.
+- `pkg/validate` is a public API that also gates `roc lint` and the Fleet
+  Terraform catalog, which fleetd refuses to load on any diagnostic, warnings
+  included (`validateWithSharedSchema` in `../pkg/fleet/config/config.go`).
+  Treat a tighter constraint or a new warning as a breaking change. Flex does
+  not validate repo configs: it uses whatever parses.
 - Pool names are the `pools` map keys; `#PoolSpec` has no `name` field. The key
   pattern is repeated in `../pkg/pool/standby/pool.go`.
 - Document field changes in `README.md` and in `runs-on/runs-on.com`:

@@ -7,8 +7,8 @@ LDFLAGS = -X github.com/runs-on/config/internal/version.Version=$(VERSION)
 setup:
 	@echo "Installing dependencies with mise..."
 	mise install
-	@echo "Installing CUE CLI..."
-	GOSUMDB=sum.golang.org mise exec -- go install cuelang.org/go/cmd/cue@latest
+	@echo "Installing the CUE CLI of the cuelang.org/go version go.mod pins..."
+	GOSUMDB=sum.golang.org mise exec -- go install "cuelang.org/go/cmd/cue@$$(mise exec -- go list -m -f '{{.Version}}' cuelang.org/go)"
 	@echo "Setup complete! Run 'make gen' to generate schema files."
 	@echo "Note: Make sure mise is activated in your shell (run 'mise activate' or add to your shell config)"
 
